@@ -31,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository_owner }}/bitkoop-validator
+          images: ghcr.io/bitkoop-com/bitkoop-validator
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -39,6 +39,6 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/bitkoop-validator:latest
+            ghcr.io/bitkoop-com/bitkoop-validator:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
