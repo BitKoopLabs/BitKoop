@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     try:
         dynamic_config_service = dependencies.get_dynamic_config_service(db=db)
         sync_progress = dynamic_config_service.get_sync_progress()
-        if sync_progress is None:
+        if not sync_progress:
             dynamic_config_service.set_sync_progress(
                 {
                     "status": "pending",
