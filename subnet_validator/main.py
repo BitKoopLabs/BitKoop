@@ -35,12 +35,14 @@ async def lifespan(app: FastAPI):
     db = next(db_gen)
     try:
         dynamic_config_service = dependencies.get_dynamic_config_service(db=db)
-        dynamic_config_service.set_sync_progress(
-            {
-                "status": "pending",
-                "started_at": datetime.now(UTC).isoformat(),
-            }
-        )
+        sync_progress = dynamic_config_service.get_sync_progress()
+        if sync_progress is None:
+            dynamic_config_service.set_sync_progress(
+                {
+                    "status": "pending",
+                    "started_at": datetime.now(UTC).isoformat(),
+                }
+            )
     finally:
         # Ensure generator finalization (commit/close or rollback)
         try:
