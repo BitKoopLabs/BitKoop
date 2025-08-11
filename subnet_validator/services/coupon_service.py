@@ -96,7 +96,8 @@ class CouponService:
                 > datetime.now(UTC) - self.resubmit_interval
             ):
                 raise ValueError(
-                    f"You cannot resubmit this coupon because it was deleted less than {self.resubmit_interval.total_seconds() // 3600} hours ago. Please try again later."
+                    f"You cannot resubmit this coupon because it was deleted less than {self.resubmit_interval.total_seconds() // 3600} hours ago.\n"
+                    f"Please try again later (after {existing_coupon.deleted_at.replace(tzinfo=UTC) + self.resubmit_interval})."
                 )
 
             # Update existing coupon in place; keep original created_at
