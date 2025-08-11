@@ -1,0 +1,50 @@
+services:
+  bitkoop-validator:
+    image: ghcr.io/ye-du-dev/bitkoop-validator:latest
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - PORT=${PORT:-8000}
+      - DATABASE_URL=sqlite:///data/bitkoop.db
+      - WALLET_NAME=${WALLET_NAME:-default}
+      - WALLET_HOTKEY=${WALLET_HOTKEY:-default}
+      - WALLET_PATH=${WALLET_PATH:-~/.bittensor/wallets/}
+      - SUBTENSOR_NETWORK=${SUBTENSOR_NETWORK:-finney}
+      - ENV=${ENV:-production}
+      - RECHECK_INTERVAL=${RECHECK_INTERVAL:-P1DT0H0M0S}
+      - RESUBMIT_INTERVAL=${RESUBMIT_INTERVAL:-P1DT0H0M0S}
+    volumes:
+      - ~/.bittensor:/root/.bittensor
+      - ./data:/app/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
+  tasks:
+    image: ghcr.io/ye-du-dev/bitkoop-validator:latest
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite:///data/bitkoop.db
+      - ENV=${ENV:-production}
+      - SUBTENSOR_NETWORK=${SUBTENSOR_NETWORK:-finney}
+      - MIN_WEIGHT_STAKE=${MIN_WEIGHT_STAKE:-1000.0}
+      - VALIDATE_OUTDATED_COUPON_INTERVAL=${VALIDATE_OUTDATED_COUPON_INTERVAL:-P1DT0H0M0S}
+      - RESPECT_PEER_SYNC=${RESPECT_PEER_SYNC:-true}
+      - PROXY_SERVER=${PROXY_SERVER:-}
+      - PROXY_USERNAME=${PROXY_USERNAME:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+    volumes:
+      - ~/.bittensor:/root/.bittensor
+      - ./data:/app/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    entrypoint: ["python", "-m", "subnet_validator.tasks.run_tasks"]
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.docker/config.json:/config.json
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+    command: --interval 30
