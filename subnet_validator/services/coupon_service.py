@@ -96,7 +96,7 @@ class CouponService:
                 > datetime.now(UTC) - self.resubmit_interval
             ):
                 raise ValueError(
-                    f"You cannot resubmit this coupon because it was deleted less than {self.resubmit_interval.total_seconds() // 3600} hours ago.\n"
+                    f"You cannot resubmit this coupon because it was deleted less than {int(self.resubmit_interval.total_seconds() / 3600)} hours ago.\n"
                     f"Please try again later (after {existing_coupon.deleted_at.replace(tzinfo=UTC) + self.resubmit_interval})."
                 )
 
@@ -394,7 +394,7 @@ class CouponService:
             request.submitted_at < window_start or request.submitted_at >= now
         ):
             raise ValueError(
-                f"Coupon was submitted outside the allowed {self.submit_window.total_seconds() // 60}-minute time window."
+                f"Coupon was submitted outside the allowed {int(self.submit_window.total_seconds() / 60)}-minute time window."
             )
         if not from_sync:
             if not self.metagraph_service.is_miner_hotkey_exists(request.hotkey):
@@ -452,7 +452,7 @@ class CouponService:
             > datetime.now(UTC) - self.recheck_interval
         ):
             raise ValueError(
-                f"You can request code re-validation only once every {self.recheck_interval.total_seconds() // 3600} hours."
+                f"You can request code re-validation only once every {int(self.recheck_interval.total_seconds() / 3600)} hours."
             )
 
         return coupon
