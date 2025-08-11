@@ -51,7 +51,7 @@ let page;
 
 
             const browser = await firefox.launch({
-                headless: false,
+                headless: true,
                 ...(proxy && {proxy})
             });
 
