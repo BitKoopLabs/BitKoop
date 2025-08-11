@@ -96,8 +96,8 @@ class CouponService:
                 > datetime.now(UTC) - self.resubmit_interval
             ):
                 raise ValueError(
-                    f"Coupon code {request.code} has already been deleted within the last {self.resubmit_interval}. \n"
-                    f"You can resubmit it after {existing_coupon.deleted_at.replace(tzinfo=UTC) + self.resubmit_interval}."
+                    f"You cannot resubmit this coupon because it was deleted less than {int(self.resubmit_interval.total_seconds() / 3600)} hours ago.\n"
+                    f"Please try again later (after {existing_coupon.deleted_at.replace(tzinfo=UTC) + self.resubmit_interval})."
                 )
 
             # Update existing coupon in place; keep original created_at
@@ -302,76 +302,106 @@ class CouponService:
         source_hotkey: str,
     ) -> List[CouponSubmitResponse]:
         """
-        Use existing service methods (create, delete, recheck) based on last_action.
-        Bypasses submit window checks by passing from_sync=True.
+        Simplified sync from another validator:
+        - Create coupon if not exists (by site_id + miner_hotkey + code, case-insensitive)
+        - If exists and incoming last_action_date is newer, update fields and status
+        - No cross-validator duplicate resolution, IDs may differ across validators
+        - Status mapping: DELETE -> DELETED, RECHECK/CREATE -> PENDING
         """
-        responses: List[CouponSubmitResponse] = []
+        responses = []
 
         for coupon_data in coupons_data:
             try:
+                # Validate signature for each coupon
                 if not self._validate_coupon_signature(coupon_data):
                     logger.warning(
                         f"Invalid signature for coupon {coupon_data.code} from {source_hotkey}"
                     )
                     continue
 
-                if coupon_data.last_action == CouponAction.CREATE:
-                    submit_req = CouponSubmitRequest(
-                        hotkey=coupon_data.miner_hotkey,
-                        site_id=coupon_data.site_id,
+                # Check if coupon already exists for this miner hotkey
+                existing_coupon = (
+                    self.db.query(Coupon)
+                    .filter(
+                        func.lower(Coupon.code) == func.lower(coupon_data.code),
+                        Coupon.site_id == coupon_data.site_id,
+                        Coupon.miner_hotkey == coupon_data.miner_hotkey,
+                    )
+                    .first()
+                )
+
+                if not existing_coupon:
+                    # New coupon from another validator
+                    logger.debug(f"Adding new coupon {coupon_data.code} from {source_hotkey}")
+
+                    status = (
+                        CouponStatus.DELETED
+                        if coupon_data.last_action == CouponAction.DELETE
+                        else CouponStatus.PENDING
+                    )
+
+                    coupon = Coupon(
+                        created_at=coupon_data.created_at,
                         code=coupon_data.code,
-                        submitted_at=coupon_data.last_action_date,
+                        site_id=coupon_data.site_id,
                         category_id=coupon_data.category_id,
+                        discount_percentage=coupon_data.discount_percentage,
+                        discount_value=coupon_data.discount_value,
+                        valid_until=coupon_data.valid_until,
+                        miner_hotkey=coupon_data.miner_hotkey,
+                        is_global=coupon_data.is_global,
                         restrictions=coupon_data.restrictions,
                         country_code=coupon_data.country_code,
-                        discount_value=coupon_data.discount_value,
-                        discount_percentage=coupon_data.discount_percentage,
-                        is_global=coupon_data.is_global,
                         used_on_product_url=coupon_data.used_on_product_url,
-                        valid_until=(
-                            coupon_data.valid_until.isoformat()
-                            if coupon_data.valid_until is not None
-                            else None
-                        ),
-                    )
-                    resp = self.create_coupon(
-                        request=submit_req,
-                        signature=coupon_data.last_action_signature,
                         source_hotkey=source_hotkey,
-                        from_sync=True,
+                        last_action=coupon_data.last_action,
+                        last_action_date=coupon_data.last_action_date,
+                        last_action_signature=coupon_data.last_action_signature,
+                        deleted_at=coupon_data.deleted_at,
+                        status=status,
                     )
-                    responses.append(resp)
-                elif coupon_data.last_action == CouponAction.DELETE:
-                    delete_req = CouponDeleteRequest(
-                        hotkey=coupon_data.miner_hotkey,
-                        site_id=coupon_data.site_id,
-                        code=coupon_data.code,
-                        submitted_at=coupon_data.last_action_date,
-                    )
-                    self.delete_coupon(
-                        request=delete_req,
-                        signature=coupon_data.last_action_signature,
-                        from_sync=True,
-                    )
-                elif coupon_data.last_action == CouponAction.RECHECK:
-                    recheck_req = CouponRecheckRequest(
-                        hotkey=coupon_data.miner_hotkey,
-                        site_id=coupon_data.site_id,
-                        code=coupon_data.code,
-                        submitted_at=coupon_data.last_action_date,
-                    )
-                    self.recheck_coupon(
-                        request=recheck_req,
-                        signature=coupon_data.last_action_signature,
-                        from_sync=True,
+                    self.db.add(coupon)
+                    self.db.flush()
+                    responses.append(
+                        CouponSubmitResponse(coupon_id=coupon.id, is_new=True)
                     )
                 else:
-                    logger.warning(
-                        f"Unsupported action {coupon_data.last_action} for coupon {coupon_data.code}"
-                    )
-                    continue
+                    # Existing coupon: only update if incoming action is newer
+                    if existing_coupon.last_action_date < coupon_data.last_action_date:
+                        logger.debug(
+                            f"Updating existing coupon {coupon_data.code} with newer action from {source_hotkey}"
+                        )
+
+                        existing_coupon.category_id = coupon_data.category_id
+                        existing_coupon.discount_percentage = coupon_data.discount_percentage
+                        existing_coupon.discount_value = coupon_data.discount_value
+                        existing_coupon.valid_until = coupon_data.valid_until
+                        existing_coupon.is_global = coupon_data.is_global
+                        existing_coupon.restrictions = coupon_data.restrictions
+                        existing_coupon.source_hotkey = source_hotkey
+                        existing_coupon.country_code = coupon_data.country_code
+                        existing_coupon.used_on_product_url = coupon_data.used_on_product_url
+                        existing_coupon.deleted_at = coupon_data.deleted_at
+                        existing_coupon.last_action = coupon_data.last_action
+                        existing_coupon.last_action_date = coupon_data.last_action_date
+                        existing_coupon.last_action_signature = coupon_data.last_action_signature
+
+                        # Update status based on last action
+                        existing_coupon.status = (
+                            CouponStatus.DELETED
+                            if coupon_data.last_action == CouponAction.DELETE
+                            else CouponStatus.PENDING
+                        )
+                        responses.append(
+                            CouponSubmitResponse(coupon_id=existing_coupon.id, is_new=False)
+                        )
+                    else:
+                        logger.debug(
+                            f"Skipping coupon {coupon_data.code} from {source_hotkey} because existing is as recent or newer"
+                        )
 
             except Exception as e:
+                # Log error but continue with other coupons
                 logger.error(
                     f"Error syncing coupon {coupon_data.code}: {e}",
                     exc_info=True,
@@ -394,7 +424,7 @@ class CouponService:
             request.submitted_at < window_start or request.submitted_at >= now
         ):
             raise ValueError(
-                f"Coupon submitted outside the valid window of {self.submit_window}"
+                f"Coupon was submitted outside the allowed {int(self.submit_window.total_seconds() / 60)}-minute time window."
             )
         if not from_sync:
             if not self.metagraph_service.is_miner_hotkey_exists(request.hotkey):
@@ -452,7 +482,7 @@ class CouponService:
             > datetime.now(UTC) - self.recheck_interval
         ):
             raise ValueError(
-                "You can request code re-validation only once every 24 hours."
+                f"You can request code re-validation only once every {int(self.recheck_interval.total_seconds() / 3600)} hours."
             )
 
         return coupon
