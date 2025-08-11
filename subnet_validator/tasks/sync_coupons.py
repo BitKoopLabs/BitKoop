@@ -335,7 +335,7 @@ async def _sync_coupons_for_validators(
     else:
         await asyncio.gather(*(fetch_and_store(node) for node in validator_nodes))
 
-    # Finalize status and optionally clear first-sync progress
+    # Finalize status and clear sync progress
     try:
         status = "ok"
         if errors_total > 0:
@@ -355,15 +355,9 @@ async def _sync_coupons_for_validators(
             "coupons_synced": processed_total_synced,
         }
         dynamic_config_service.set_last_sync_result(result_payload)
-
-        if is_first_sync:
-            if status in ("ok", "error", "empty"):
-                dynamic_config_service.set_sync_progress()
-                logger.info("First-time coupon sync finalized and progress cleared")
-            else:
-                logger.info(
-                    "First-time coupon sync not yet complete; progress retained for next iteration"
-                )
+        # Clear sync progress after each sync run
+        dynamic_config_service.set_sync_progress()
+        logger.info("Coupon sync finalized and progress cleared")
     except Exception as e:
         logger.error(f"Failed to finalize sync status: {e}")
 
