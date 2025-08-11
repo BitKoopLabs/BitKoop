@@ -4,11 +4,12 @@ FROM python:3.12-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies including Node.js and Playwright browser dependencies
+# Install base system dependencies and Node.js (required for npm/npx and Playwright CLI)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
@@ -17,35 +18,8 @@ RUN apt-get update && \
     pkg-config \
     curl \
     gnupg \
-    # Install Node.js 24 (latest LTS)
-    && curl -fsSL https://deb.nodesource.com/setup_24.x | DEBIAN_FRONTEND=noninteractive bash - \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs \
-    # Playwright browser dependencies
-    && apt-get install -y --no-install-recommends \
-    libxcb-shm0 \
-    libx11-xcb1 \
-    libx11-6 \
-    libxcb1 \
-    libxext6 \
-    libxrandr2 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxi6 \
-    libgtk-3-0 \
-    libgdk-pixbuf-2.0-0 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libatk1.0-0 \
-    libcairo2 \
-    libcairo-gobject2 \
-    libglib2.0-0 \
-    libxrender1 \
-    libasound2 \
-    libfreetype6 \
-    libfontconfig1 \
-    libdbus-1-3 \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pip and poetry
@@ -60,10 +34,10 @@ RUN pip install --no-cache-dir .
 
 # Install Node.js dependencies for koupons_validator
 WORKDIR /app/koupons_validator
-RUN npm install
+RUN npm ci
 
-# Install Playwright browsers
-RUN npx playwright install
+# Install Playwright system dependencies and browsers
+RUN npx playwright install --with-deps
 
 # Return to main app directory
 WORKDIR /app
