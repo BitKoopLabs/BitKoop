@@ -96,8 +96,7 @@ class CouponService:
                 > datetime.now(UTC) - self.resubmit_interval
             ):
                 raise ValueError(
-                    f"Coupon code {request.code} has already been deleted within the last {self.resubmit_interval}. \n"
-                    f"You can resubmit it after {existing_coupon.deleted_at.replace(tzinfo=UTC) + self.resubmit_interval}."
+                    f"You cannot resubmit this coupon because it was deleted less than {self.resubmit_interval.total_seconds() // 3600} hours ago. Please try again later."
                 )
 
             # Update existing coupon in place; keep original created_at
@@ -452,7 +451,7 @@ class CouponService:
             > datetime.now(UTC) - self.recheck_interval
         ):
             raise ValueError(
-                "You can request code re-validation only once every 24 hours."
+                f"You can request code re-validation only once every {self.recheck_interval.total_seconds() // 3600} hours."
             )
 
         return coupon
