@@ -1,6 +1,6 @@
 services:
   bitkoop-validator:
-    image: ghcr.io/bitkoop-com/bitkoop-validator:latest
+    image: ghcr.io/bitkooplabs/bitkoop-validator:latest
     ports:
       - "${PORT:-8000}:8000"
     environment:
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
   tasks:
-    image: ghcr.io/bitkoop-com/bitkoop-validator:latest
+    image: ghcr.io/bitkooplabs/bitkoop-validator:latest
     restart: unless-stopped
     environment:
       - DATABASE_URL=sqlite:///data/bitkoop.db
