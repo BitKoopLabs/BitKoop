@@ -394,7 +394,7 @@ class CouponService:
             request.submitted_at < window_start or request.submitted_at >= now
         ):
             raise ValueError(
-                f"Coupon submitted outside the valid window of {self.submit_window}"
+                f"Coupon was submitted outside the allowed {self.submit_window.total_seconds() // 60}-minute time window."
             )
         if not from_sync:
             if not self.metagraph_service.is_miner_hotkey_exists(request.hotkey):
