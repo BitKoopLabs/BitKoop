@@ -138,6 +138,11 @@ def get_coupons(
             if now_ms - nonce_ms > window_ms:
                 raise HTTPException(status_code=401, detail="Nonce expired")
 
+            validator_nodes = coupon_service.metagraph_service.get_validator_nodes()
+            validator_hotkeys = {node.hotkey for node in validator_nodes}
+            if hotkey not in validator_hotkeys:
+                raise HTTPException(status_code=401, detail="Hotkey not in validator nodes")
+
             # Sign only hotkey and nonce
             payload = {
                 "hotkey": hotkey,
