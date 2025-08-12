@@ -50,6 +50,7 @@ async def sync_metagraph(
     await _sync_nodes_to_database(
         nodes,
         metagraph_service,
+        settings.min_weight_stake,
         logger,
     )
     logger.info(f"Finished syncing {len(nodes)} metagraph nodes.")
@@ -58,6 +59,7 @@ async def sync_metagraph(
 async def _sync_nodes_to_database(
     nodes: list[Node],
     metagraph_service: MetagraphService,
+    needed_weight: float,
     logger,
 ):
     async def sync_node(node: Node):
@@ -65,9 +67,11 @@ async def _sync_nodes_to_database(
             # Get validator version if available
             validator_version = await _get_validator_version(node)
 
+            is_enough_weight = _is_enough_weight(node, needed_weight)
+
             # Create or update node in database
             is_created = metagraph_service.create_or_update_node(
-                node, validator_version=validator_version
+                node, validator_version=validator_version, is_enough_weight=is_enough_weight
             )
 
             action = "Created" if is_created else "Updated"
@@ -91,6 +95,15 @@ async def _get_all_nodes(
         )
     ]
     return nodes
+
+def get_stake_weights(node: Node) -> float:
+    return node.alpha_stake + 0.18 * node.tao_stake
+
+def _is_enough_weight(
+    node: Node, needed_weight: float
+) -> bool:
+    weight = get_stake_weights(node)
+    return weight >= needed_weight
 
 
 async def _get_validator_version(

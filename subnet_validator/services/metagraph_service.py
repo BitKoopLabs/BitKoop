@@ -14,7 +14,7 @@ class MetagraphService:
         self.db = db
 
     def create_or_update_node(
-        self, node: Node, validator_version: str | None = None
+        self, node: Node, validator_version: str | None = None, is_enough_weight: bool | None = None
     ) -> bool:
         """
         Creates or updates a MetagraphNode record from a fiber Node.
@@ -41,6 +41,7 @@ class MetagraphService:
             existing_node.protocol = node.protocol
             existing_node.port = node.port
             existing_node.validator_version = validator_version
+            existing_node.is_enough_weight = is_enough_weight
 
             self.db.commit()
             return False  # Updated existing node
@@ -59,6 +60,7 @@ class MetagraphService:
                 protocol=node.protocol,
                 port=node.port,
                 validator_version=validator_version,
+                is_enough_weight=is_enough_weight,
             )
 
             self.db.add(new_node)
@@ -69,6 +71,7 @@ class MetagraphService:
         nodes = (
             self.db.query(MetagraphNode)
             .filter(MetagraphNode.validator_version == version)
+            .filter(MetagraphNode.is_enough_weight == True)
             .all()
         )
         return [self.to_node(node) for node in nodes]

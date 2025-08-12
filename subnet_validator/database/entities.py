@@ -253,6 +253,10 @@ class MetagraphNode(Base):
         String,
         nullable=True,
     )
+    is_enough_weight: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=True,
+    )
 
 
 class DynamicConfig(Base):
