@@ -77,7 +77,7 @@ class SupervisorApiClient:
         """
         params = {
             "page": page,
-            "page_size": page_size,
+            "limit": page_size,
         }
         url = f"{self.base_url}/sites"
         async with self._client as client:

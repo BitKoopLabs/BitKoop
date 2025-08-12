@@ -22,28 +22,47 @@ async def sync_sites(
     settings: Settings,
 ):
     logger.info("Syncing sites from supervisor API")
-    async with SupervisorApiClient(settings.supervisor_api_url) as api_client:
-        try:
-            sites = await api_client.get_sites()
-        except Exception as e:
-            logger.error(f"Failed to fetch sites from supervisor API: {e}")
-            return
-    db = next(get_db())
-    service = SiteService(db)
     processed = 0
-    for site in sites:
+    page = 1
+    page_size = 100
+    db_gen = get_db()
+    db = next(db_gen)
+    try:
+        service = SiteService(db)
+        async with SupervisorApiClient(settings.supervisor_api_url) as api_client:
+            while True:
+                try:
+                    sites = await api_client.get_sites(page=page, page_size=page_size)
+                except Exception as e:
+                    logger.error(f"Failed to fetch sites from supervisor API (page {page}): {e}")
+                    break
+
+                if not sites:
+                    break
+
+                for site in sites:
+                    try:
+                        service.add_or_update_site(
+                            store_id=site.store_id,
+                            store_domain=site.store_domain,
+                            store_status=site.store_status,
+                            miner_hotkey=site.miner_hotkey,
+                            config=site.config,
+                        )
+                        processed += 1
+                    except Exception as e:
+                        logger.error(f"Failed to add/update site {site.store_id}: {e}")
+                db.commit()
+
+                if len(sites) < page_size:
+                    break
+                page += 1
+    finally:
         try:
-            service.add_or_update_site(
-                store_id=site.store_id,
-                store_domain=site.store_domain,
-                store_status=site.store_status,
-                miner_hotkey=site.miner_hotkey,
-                config=site.config,
-            )
-            processed += 1
-        except Exception as e:
-            logger.error(f"Failed to add/update site {site.store_id}: {e}")
-        db.commit()
+            next(db_gen)
+        except StopIteration:
+            pass
+
     logger.info(f"Processed {processed} sites.")
 
 

@@ -184,11 +184,13 @@ class CouponService:
         sort_by: Literal[
             "created_at", "updated_at", "last_action_date"
         ] = "updated_at",
+        bypass_submit_window: bool = False,
     ) -> List[Coupon]:
         query = self.db.query(Coupon)
-        query = query.filter(
-            Coupon.last_action_date < int((datetime.now(UTC) - self.submit_window).timestamp() * 1000)
-        )
+        if not bypass_submit_window:
+            query = query.filter(
+                Coupon.last_action_date < int((datetime.now(UTC) - self.submit_window).timestamp() * 1000)
+            )
         if miner_hotkey is not None:
             query = query.filter(Coupon.miner_hotkey == miner_hotkey)
         if site_id is not None:
