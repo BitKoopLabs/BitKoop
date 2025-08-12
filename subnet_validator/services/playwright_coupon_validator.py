@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import List, Tuple, Callable, Optional
 
 from subnet_validator.constants import CouponStatus
+from fiber.logging_utils import get_logger
 from subnet_validator.database.entities import Coupon, Site
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class PlaywrightCouponValidator:
@@ -41,8 +42,10 @@ class PlaywrightCouponValidator:
         except Exception as e:
             logger.warning("Error while streaming subprocess output: %s", e)
 
-    async def _run_node_validation(self, coupon: Coupon, site_config: dict) -> bool:
-        """Run the Node.js validation script as a subprocess"""
+    async def _run_node_validation(self, coupon: Coupon, site_config: dict) -> Optional[bool]:
+        """Run the Node.js validation script as a subprocess.
+        Returns True for valid, False for invalid, None for unknown (e.g., timeout/error).
+        """
         try:
             # Create temporary directory for output
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -58,11 +61,11 @@ class PlaywrightCouponValidator:
                 if coupon.used_on_product_url:
                     cmd.append(f"--used_on_product_url={coupon.used_on_product_url}")
                 logger.info(
-                    "Starting Node.js validation subprocess: cmd=%s, cwd=%s, coupon=%s, domain=%s",
-                    " ".join(map(str, cmd)),
-                    temp_dir,
+                    "Starting Node.js validation subprocess | coupon=%s site=%s cwd=%s cmd=%s",
                     coupon.code,
                     self.site.base_url,
+                    temp_dir,
+                    " ".join(map(str, cmd)),
                 )
 
                 # Run the subprocess
@@ -90,35 +93,57 @@ class PlaywrightCouponValidator:
                 try:
                     await asyncio.wait_for(process.wait(), timeout=300)  # 5 minute timeout
                 except asyncio.TimeoutError:
-                    logger.error("Subprocess timed out after 300s. Terminating...")
+                    logger.error(
+                        "Node validation timed out after 300s | coupon=%s site=%s. Terminating...",
+                        coupon.code,
+                        self.site.base_url,
+                    )
                     with contextlib.suppress(ProcessLookupError):
                         process.kill()
                     # Ensure we consume remaining output
                     await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
-                    return False
+                    return None
 
                 # Ensure all output was drained
                 await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
 
-                logger.info("Subprocess finished with return code %s", process.returncode)
+                logger.info(
+                    "Node validation finished | coupon=%s site=%s return_code=%s",
+                    coupon.code,
+                    self.site.base_url,
+                    process.returncode,
+                )
                 if process.returncode != 0:
-                    logger.error("Node.js script exited with non-zero return code: %s", process.returncode)
-                    return False
+                    logger.error(
+                        "Node validation exited non-zero | coupon=%s site=%s return_code=%s",
+                        coupon.code,
+                        self.site.base_url,
+                        process.returncode,
+                    )
+                    return None
                 
                 # Check if result.json was created and parse it
                 result_file = Path(temp_dir) / "output" / "result.json"
                 if result_file.exists():
                     with open(result_file, 'r') as f:
                         result = json.load(f)
-                        return result.get("couponIsValid", False)
+                        value = result.get("couponIsValid", None)
+                        if isinstance(value, bool):
+                            return value
+                        return None
                 
                 # Fallback: check stdout for success indicators
                 logger.debug("Result file not found. Falling back to success indicators in streamed output.")
                 return success_seen
                 
         except Exception as e:
-            logger.exception("Error running Node.js validation: %s", e)
-            return False
+            logger.exception(
+                "Error running Node.js validation | coupon=%s site=%s error=%s",
+                coupon.code,
+                self.site.base_url,
+                e,
+            )
+            return None
 
     async def validate(self, coupons: List[Coupon]) -> List[Tuple[Coupon, bool]]:
         """Validate coupons using the Node.js Playwright script"""
@@ -132,17 +157,21 @@ class PlaywrightCouponValidator:
                 config = self.site.config.copy()
                 if coupon.used_on_product_url:
                     config["productUrl"] = coupon.used_on_product_url
-                is_valid = await self._run_node_validation(coupon, config)
-                
-                # Update coupon status
-                coupon.status = CouponStatus.VALID if is_valid else CouponStatus.INVALID
+                result = await self._run_node_validation(coupon, config)
+
+                # Update coupon status only on definitive result; leave as-is on None
+                if result is True:
+                    coupon.status = CouponStatus.VALID
+                elif result is False:
+                    coupon.status = CouponStatus.INVALID
+                # If result is None, keep existing status unchanged
                 coupon.last_checked_at = datetime.now(UTC)
                 
-                results.append((coupon, is_valid))
+                results.append((coupon, result is True))
                 
             except Exception as e:
                 logger.exception("Error validating coupon %s: %s", coupon.code, e)
-                coupon.status = CouponStatus.INVALID
+                # On unexpected errors, keep status as-is
                 coupon.last_checked_at = datetime.now(UTC)
                 results.append((coupon, False))
         
