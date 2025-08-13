@@ -1,5 +1,5 @@
-# Use official Python 3.12 slim image
-FROM python:3.12-slim
+# Use official Python 3.12 slim image pinned to Debian Bookworm to ensure Playwright deps install reliably
+FROM python:3.12-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
