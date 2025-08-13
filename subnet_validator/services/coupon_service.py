@@ -445,7 +445,7 @@ class CouponService:
 
         if site.status == SiteStatus.INACTIVE:
             raise ValueError(
-                f"We're unable to revalidate your coupon ({request.code}) because the website {site.base_url} is currently marked as inactive."
+                f"Unable to validate the coupon \"{request.code}\" because the website {site.base_url} is currently marked as inactive."
             )
 
     def _validate_recheck_request(

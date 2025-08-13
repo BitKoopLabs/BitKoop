@@ -82,7 +82,7 @@ async def submit_code(
     except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=str(e),
+            detail=str("\n".join(e.args)),
         )
     except Exception as e:
         logger.error(

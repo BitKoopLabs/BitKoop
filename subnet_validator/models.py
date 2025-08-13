@@ -62,7 +62,6 @@ class CouponActionRequest(HotkeyRequest):
         if not re.fullmatch(r"[A-Za-z0-9\-–]+", v):
             raise ValueError(
                 "Only letters, numbers, hyphens and dashes are allowed.\n"
-                "If you believe this is incorrect or need assistance, feel free to contact us via the BitKoop community."
             )
         return v
 
@@ -116,7 +115,7 @@ class CouponSubmitRequest(CouponActionRequest):
                 raise ValueError
         except Exception:
             raise ValueError(
-                "country_code must be a valid ISO 3166-1 alpha-2 code"
+                "Must be a valid ISO 3166-1 alpha-2 code"
             )
         return v.upper()
 
@@ -132,11 +131,11 @@ class CouponSubmitRequest(CouponActionRequest):
             # Parse ISO format datetime string
             valid_until_datetime = datetime.fromisoformat(v)
             if valid_until_datetime < datetime.now(UTC):
-                raise ValueError("valid_until must be in the future")
+                raise ValueError("Must be in the future")
             return v
         except Exception:
             raise ValueError(
-                "valid_until must be a valid ISO format datetime string"
+                "Must be a valid ISO format datetime string"
             )
 
     def get_valid_until_datetime(self) -> Optional[datetime]:
