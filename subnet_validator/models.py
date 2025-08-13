@@ -130,19 +130,29 @@ class CouponSubmitRequest(CouponActionRequest):
         try:
             # Parse ISO format datetime string
             valid_until_datetime = datetime.fromisoformat(v)
-            if valid_until_datetime < datetime.now(UTC):
-                raise ValueError("Must be in the future")
-            return v
-        except Exception:
-            raise ValueError(
-                "Must be a valid ISO format datetime string"
-            )
+        except (TypeError, ValueError):
+            raise ValueError("Must be a valid ISO format datetime string")
+
+        # Treat naive datetimes as UTC
+        if valid_until_datetime.tzinfo is None:
+            valid_until_datetime = valid_until_datetime.replace(tzinfo=UTC)
+
+        if valid_until_datetime < datetime.now(UTC):
+            raise ValueError("Must be in the future")
+
+        return v
 
     def get_valid_until_datetime(self) -> Optional[datetime]:
         """Convert valid_until string to datetime object."""
         if self.valid_until is None:
             return None
-        return datetime.fromisoformat(self.valid_until)
+        value = self.valid_until
+        # Normalize 'Z' suffix to '+00:00' for fromisoformat compatibility
+        value = value.replace("Z", "+00:00") if isinstance(value, str) else value
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt
 
 
 class CouponSubmitResponse(BaseModel):
