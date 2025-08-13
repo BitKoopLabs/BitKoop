@@ -8,6 +8,7 @@ from subnet_validator.services.category_service import CategoryService
 from subnet_validator.services.coupon_service import (
     CouponService,
 )
+from subnet_validator.services.dynamic_config_service import DynamicConfigService
 from subnet_validator.services.validator_sync_offset_service import (
     ValidatorSyncOffsetService,
 )
@@ -65,7 +66,7 @@ async def run_tasks_in_order(
     metagraph_service: MetagraphService,
     weight_calculator: WeightCalculatorService,
     category_service: CategoryService,
-    dynamic_config_service,
+    dynamic_config_service: DynamicConfigService,
 ):
     """
     Run tasks sequentially in the required order, respecting their own intervals:
@@ -238,8 +239,8 @@ if __name__ == "__main__":
             validator_sync_offset_service,
             metagraph_service,
             weight_calculator,
-            dynamic_config_service,
             category_service,
+            dynamic_config_service,
         )
 
     asyncio.run(main())
