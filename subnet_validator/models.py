@@ -130,7 +130,9 @@ class CouponSubmitRequest(CouponActionRequest):
             return v
         try:
             # Parse ISO format datetime string
-            datetime.fromisoformat(v)
+            valid_until_datetime = datetime.fromisoformat(v)
+            if valid_until_datetime < datetime.now(UTC):
+                raise ValueError("valid_until must be in the future")
             return v
         except Exception:
             raise ValueError(
