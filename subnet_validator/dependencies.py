@@ -11,6 +11,7 @@ from fastapi import (
 )
 
 from subnet_validator.database.entities import Site
+from subnet_validator.services.category_service import CategoryService
 from subnet_validator.services.coupon_validator import CouponValidator
 from subnet_validator.services.playwright_coupon_validator import PlaywrightCouponValidator
 from subnet_validator.services.validator_sync_offset_service import (
@@ -65,6 +66,15 @@ def get_dynamic_config_service(
     ],
 ):
     return DynamicConfigService(db)
+
+
+def get_category_service(
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+):
+    return CategoryService(db)
 
 
 def get_coupon_service(

@@ -50,7 +50,8 @@ class PlaywrightCouponValidator:
             # Create temporary directory for output
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Prepare the command
-                config_arg = json.dumps(site_config, ensure_ascii=False, separators=(",", ":"))
+                # Use ASCII-escaped JSON to avoid CLI parsing issues on Node side (emojis, special chars)
+                config_arg = json.dumps(site_config, ensure_ascii=True, separators=(",", ":"))
                 cmd = [
                     "node",
                     str(self.node_script_path),
@@ -77,6 +78,8 @@ class PlaywrightCouponValidator:
                 )
                 # Stream stdout/stderr in real time
                 success_seen = False
+                parse_error_seen = False
+                stderr_lines = 0
 
                 def check_success(line: str) -> None:
                     nonlocal success_seen
@@ -86,8 +89,14 @@ class PlaywrightCouponValidator:
                 stdout_task = asyncio.create_task(
                     self._stream_subprocess_output(process.stdout, logging.INFO, "node(stdout): ", on_line=check_success)
                 )
+                def check_stderr(line: str) -> None:
+                    nonlocal parse_error_seen, stderr_lines
+                    stderr_lines += 1
+                    if "Invalid JSON in --config" in line or "SyntaxError" in line:
+                        parse_error_seen = True
+
                 stderr_task = asyncio.create_task(
-                    self._stream_subprocess_output(process.stderr, logging.ERROR, "node(stderr): ")
+                    self._stream_subprocess_output(process.stderr, logging.ERROR, "node(stderr): ", on_line=check_stderr)
                 )
 
                 try:
@@ -133,8 +142,15 @@ class PlaywrightCouponValidator:
                         return None
                 
                 # Fallback: check stdout for success indicators
-                logger.debug("Result file not found. Falling back to success indicators in streamed output.")
-                return success_seen
+                logger.debug(
+                    "Result file not found | coupon=%s site=%s success_seen=%s stderr_lines=%s parse_error_seen=%s",
+                    coupon.code,
+                    self.site.base_url,
+                    success_seen,
+                    stderr_lines,
+                    parse_error_seen,
+                )
+                return True if success_seen else None
                 
         except Exception as e:
             logger.exception(

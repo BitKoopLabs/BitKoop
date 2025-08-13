@@ -4,6 +4,7 @@ import time
 from fiber import (
     SubstrateInterface,
 )
+from subnet_validator.services.category_service import CategoryService
 from subnet_validator.services.coupon_service import (
     CouponService,
 )
@@ -35,6 +36,7 @@ from subnet_validator.tasks.set_weights import (
     set_weights,
 )
 from subnet_validator.dependencies import (
+    get_category_service,
     get_dynamic_config_service,
     get_settings,
     get_coupon_service,
@@ -62,6 +64,7 @@ async def run_tasks_in_order(
     validator_sync_offset_service: ValidatorSyncOffsetService,
     metagraph_service: MetagraphService,
     weight_calculator: WeightCalculatorService,
+    category_service: CategoryService,
     dynamic_config_service,
 ):
     """
@@ -129,7 +132,7 @@ async def run_tasks_in_order(
         if is_due("categories", now_ts):
             try:
                 logger.info("Running: Sync categories")
-                await sync_categories(settings)
+                await sync_categories(settings, category_service)
             except Exception as e:
                 logger.error(f"Error in Sync categories: {e}", exc_info=True)
             finally:
@@ -225,6 +228,7 @@ if __name__ == "__main__":
         metagraph_service=metagraph_service,
         dynamic_config_service=dynamic_config_service,
     )
+    category_service = get_category_service(db=db)
 
     async def main():
         await run_tasks_in_order(
@@ -235,6 +239,7 @@ if __name__ == "__main__":
             metagraph_service,
             weight_calculator,
             dynamic_config_service,
+            category_service,
         )
 
     asyncio.run(main())

@@ -97,7 +97,7 @@ class SupervisorApiClient:
         url = f"{self.base_url}/product-categories"
         params = {
             "page": page,
-            "page_size": page_size,
+            "limit": page_size,
         }
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             resp = await client.get(url, params=params)
