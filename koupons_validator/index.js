@@ -8,7 +8,7 @@ let page;
 
     (async () => {
         const args = Object.fromEntries(
-            process.argv.slice(2).map(arg => arg.replace(/^--/, '').split('='))
+            process.argv.slice(2).map(a => a.replace(/^--/, '').split(/=(.*)/s).slice(0,2))
         );
 
         const {coupon, domain, config, used_on_product_url} = args;
@@ -18,7 +18,6 @@ let page;
             log('Usage: node index.js --coupon=YOUR_COUPON --domain=YOUR_DOMAIN');
             return;
         }
-
 
         let siteConfig;
         try {
@@ -48,20 +47,30 @@ let page;
 
 
         log('[⏳] Starting headless-browser...');
+        const userDataDir = './pw-user';
 
-
-        const browser = await firefox.launch({
+        const browserCtx = await firefox.launchPersistentContext(userDataDir, {
             headless: true,
-            ...(proxy && {proxy})
-        });
-
-        const context = await browser.newContext({
-            userAgent:
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.188 Safari/537.36',
+            ...(proxy && { proxy }),
             locale: 'en-US',
+            userAgent: 'Mozilla/5.0 ...'
         });
 
-        page = await context.newPage();
+        page = browserCtx.pages()[0]; // перша вкладка, що вже відкрита
+
+        // const browser = await firefox.launch({
+        //     headless: false,
+        //     ...(proxy && {proxy})
+        // });
+        //
+        // const context = await browser.newContext({
+        //     userAgent:
+        //         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.188 Safari/537.36',
+        //     locale: 'en-US',
+        // });
+        //
+        // page = await context.newPage();
+
 
 
         // 🛡️ Anti-bot evasion
@@ -76,7 +85,8 @@ let page;
 
         try {
             log(`[🌐] Go to Website ${siteConfig.productUrl}`);
-            await page.goto(siteConfig.productUrl, {waitUntil: 'domcontentloaded', timeout: 6000000});
+            await page.goto(siteConfig.productUrl, {waitUntil: 'domcontentloaded', timeout: 60000});
+            await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
             await page.waitForTimeout(siteConfig.waitTime);
 
             if (siteConfig.actions.length) {
@@ -98,8 +108,6 @@ let page;
                                     } else if (action.type === 'click') {
                                         const el = await page.$(selector);
                                         if (el) {
-                                            await el.click({ force: true });
-                                            await page.dispatchEvent(selector, 'click');
                                             await el.evaluate(el => el.click());
                                         }
                                     } else {
@@ -137,6 +145,7 @@ let page;
         } catch (e) {
             error(`❌ Unexpected error: ${e.message}`);
         }
+        await clearSiteStorage(page);
         const outputDir = './output';
         if (!fs.existsSync(outputDir)) {
             fs.mkdirSync(outputDir, {recursive: true});
@@ -145,9 +154,58 @@ let page;
         await page.screenshot({path: `${outputDir}/screenshot.png`, fullPage: true});
         fs.writeFileSync(`${outputDir}/html_snapshot.html`, html);
         fs.writeFileSync(`${outputDir}/result.json`, JSON.stringify({logs, couponIsValid}, null, 2));
-        await browser.close();
+        await browserCtx.close();
     })();
 
+async function clearSiteStorage(page) {
+    log('🧹 [CLEANUP] Starting site data cleanup...');
+
+    try {
+        await page.context().clearCookies();
+        log('🍪 Cookies cleared');
+    } catch (err) {
+        log('⚠️ Failed to clear cookies:', err.message);
+    }
+
+    // чистимо storage на поточному origin
+    await page.evaluate(async () => {
+        try { localStorage.clear(); log('📦 localStorage cleared'); } catch {}
+        try { sessionStorage.clear(); log('📦 sessionStorage cleared'); } catch {}
+
+        try {
+            // IndexedDB
+            if (indexedDB?.databases) {
+                const dbs = await indexedDB.databases();
+                for (const db of dbs) {
+                    if (db.name) await new Promise((res, rej) => {
+                        const req = indexedDB.deleteDatabase(db.name);
+                        req.onsuccess = req.onerror = req.onblocked = () => res();
+                    });
+                }
+                log('💾 IndexedDB cleared');
+            }
+        } catch {}
+
+        try {
+            // Cache Storage (service worker caches)
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+            log('🗄️ Cache Storage cleared');
+        } catch {}
+
+        try {
+            // Service Workers
+            if (navigator.serviceWorker?.getRegistrations) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+                log('🚫 Service Workers unregistered');
+            }
+        } catch {}
+    });
+
+    log('✅ [CLEANUP] Cleanup completed');
+
+}
 function log(message) {
     console.log(message);
     logs.push({ type: 'log', message, timestamp: new Date().toISOString() });
