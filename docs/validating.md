@@ -18,7 +18,7 @@ Note: For subnet registration and system overview, see the main README.
 2. Download the latest `docker-compose.yml` from the official repository:
 
    ```sh
-   curl -L -o docker-compose.yml https://raw.githubusercontent.com/BitKoop-com/BitKoop/main/docker-compose.yml
+   curl -L -o docker-compose.yml https://raw.githubusercontent.com/BitKoopLabs/BitKoop/main/docker-compose.yml
    ```
 
 3. Start the validator (and watchtower) in the background:
@@ -72,7 +72,7 @@ If you still want to run locally:
 1. Clone the repository and set up your environment:
 
    ```sh
-   git clone https://github.com/BitKoop-com/BitKoop.git
+   git clone https://github.com/BitKoopLabs/BitKoop.git
    cd BitKoop
    python3 -m venv venv
    source venv/bin/activate
