@@ -28,8 +28,8 @@ RUN apt-get update && \
 RUN pip install --upgrade pip
 
 # Pre-copy Node manifests and install Node dependencies with cache
-WORKDIR /app/koupons_validator
-COPY koupons_validator/package.json koupons_validator/package-lock.json ./
+WORKDIR /app/coupon_validation
+COPY coupon_validation/package.json coupon_validation/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 # Install only Firefox browser and its system deps to reduce time/size

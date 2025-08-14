@@ -137,7 +137,7 @@ def get_coupon_validator(site: Site, settings: Annotated[Settings, Depends(get_s
     if settings.env == "prod":
         return PlaywrightCouponValidator(
             site=site,
-            path=Path.cwd() / "koupons_validator" / "index.js",
+            path=Path.cwd() / "coupon_validation" / "index.js",
         )
     else: 
         return CouponValidator(site=site)

@@ -11,7 +11,7 @@ venv
 .env.*
 node_modules
 **/node_modules
-koupons_validator/output
+coupon_validation/output
 /tests
 **/tests
 alembic/versions/*.pyc
