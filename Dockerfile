@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.6
 # Use official Python 3.12 slim image pinned to Debian Bookworm to ensure Playwright deps install reliably
 FROM python:3.12-slim-bookworm
 
@@ -25,22 +26,18 @@ RUN apt-get update && \
 # Install pip and poetry
 RUN pip install --upgrade pip
 
-# Copy project files
-COPY pyproject.toml .
-COPY . .
-
-# Install Python project dependencies
-RUN pip install --no-cache-dir .
-
-# Install Node.js dependencies for koupons_validator
+# Pre-copy Node manifests and install Node dependencies with cache
 WORKDIR /app/koupons_validator
-RUN npm ci
+COPY koupons_validator/package.json koupons_validator/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
-# Install Playwright system dependencies and browsers
-RUN npx playwright install --with-deps
+# Install only Firefox browser and its system deps to reduce time/size, caching browser downloads
+RUN --mount=type=cache,target=/root/.cache/ms-playwright npx playwright install --with-deps firefox
 
-# Return to main app directory
+# Copy the rest of the project and install Python package and deps from pyproject
 WORKDIR /app
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/pip pip install .
 
 # Set default environment variables (can be overridden at runtime)
 ENV HOST=0.0.0.0
