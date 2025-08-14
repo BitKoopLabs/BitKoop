@@ -6,6 +6,7 @@ FROM python:3.12-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Set work directory
 WORKDIR /app
@@ -31,8 +32,8 @@ WORKDIR /app/koupons_validator
 COPY koupons_validator/package.json koupons_validator/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
-# Install only Firefox browser and its system deps to reduce time/size, caching browser downloads
-RUN --mount=type=cache,target=/root/.cache/ms-playwright npx playwright install --with-deps firefox
+# Install only Firefox browser and its system deps to reduce time/size
+RUN npx playwright install --with-deps firefox
 
 # Copy the rest of the project and install Python package and deps from pyproject
 WORKDIR /app
