@@ -42,7 +42,6 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/bitkooplabs/bitkoop-validator:latest
           cache-from: type=gha

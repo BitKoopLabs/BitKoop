@@ -342,7 +342,7 @@ class CouponService:
                         else CouponStatus.PENDING
                     )
 
-                    coupon = Coupon(
+                    coupon = Coupon(    
                         created_at=coupon_data.created_at,
                         code=coupon_data.code,
                         site_id=coupon_data.site_id,
