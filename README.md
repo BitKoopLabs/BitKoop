@@ -61,7 +61,6 @@ We aim to capture market share by delivering **verified value** in a space domin
 ---
 
 ## Scoring Formula
-- **Data window**: Only VALID coupons created in the last 30 days count.
 - **Points**:
   - Coupon < 7 days old: **100 points**
   - Coupon ≥ 7 days old: **200 points**

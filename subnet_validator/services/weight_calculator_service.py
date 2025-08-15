@@ -63,18 +63,16 @@ class WeightCalculatorService:
         else:
             return 100
 
-    def get_valid_coupons_last_30_days(self) -> List[Coupon]:
+    def get_valid_coupons(self) -> List[Coupon]:
         """
-        Get all valid coupons from the last 30 days.
+        Get all valid coupons
         """
-        thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
 
         return (
             self.db.query(Coupon)
             .filter(
                 and_(
                     Coupon.status == CouponStatus.VALID,
-                    Coupon.created_at >= thirty_days_ago,
                     Coupon.deleted_at.is_(None),  # Not deleted
                 )
             )
@@ -234,9 +232,9 @@ class WeightCalculatorService:
         logger.info("Starting weight calculation...")
 
         try:
-            # Get valid coupons from last 30 days
-            logger.info("Fetching valid coupons from last 30 days...")
-            valid_coupons = self.get_valid_coupons_last_30_days()
+            # Get valid coupons
+            logger.info("Fetching valid coupons...")
+            valid_coupons = self.get_valid_coupons()
             logger.info(f"Found {len(valid_coupons)} valid coupons")
 
             # Deduplicate coupons by site and code
