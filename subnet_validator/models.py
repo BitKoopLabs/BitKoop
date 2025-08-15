@@ -13,6 +13,7 @@ from datetime import (
 from typing import (
     Optional,
 )
+from pydantic_core import PydanticCustomError
 from scalecodec.utils.ss58 import (
     ss58_decode,
 )
@@ -34,7 +35,10 @@ class HotkeyRequest(BaseModel):
         try:
             ss58_decode(v)
         except Exception:
-            raise ValueError("Invalid ss58 address")
+            raise PydanticCustomError(
+                "value_error",
+                "Invalid ss58 address",
+            )
         return v
 
     model_config = ConfigDict(extra="allow")
@@ -57,11 +61,15 @@ class CouponActionRequest(HotkeyRequest):
     def validate_code_trimmed(cls, v):
         """Validate that coupon code is trimmed (no leading or trailing whitespace)."""
         if v != v.strip():
-            raise ValueError("Coupon code must not have leading or trailing whitespace")
+            raise PydanticCustomError(
+                "value_error",
+                "Coupon code must not have leading or trailing whitespace",
+            )
         # Allow only letters, numbers, hyphen-minus '-' and en dash '–'
         if not re.fullmatch(r"[A-Za-z0-9\-–]+", v):
-            raise ValueError(
-                "Only letters, numbers, hyphens and dashes are allowed.\n"
+            raise PydanticCustomError(
+                "value_error",
+                "Only letters, numbers, hyphens and dashes are allowed.\n",
             )
         return v
 
@@ -110,12 +118,10 @@ class CouponSubmitRequest(CouponActionRequest):
     ):
         if v is None:
             return v
-        try:
-            if pycountry.countries.get(alpha_2=v.upper()) is None:
-                raise ValueError
-        except Exception:
-            raise ValueError(
-                "Must be a valid ISO 3166-1 alpha-2 code"
+        if pycountry.countries.get(alpha_2=v.upper()) is None:
+            raise PydanticCustomError(
+                "value_error",
+                "Must be a valid ISO 3166-1 alpha-2 code",
             )
         return v.upper()
 
@@ -131,14 +137,20 @@ class CouponSubmitRequest(CouponActionRequest):
             # Parse ISO format datetime string
             valid_until_datetime = datetime.fromisoformat(v)
         except (TypeError, ValueError):
-            raise ValueError("Must be a valid ISO format datetime string")
+            raise PydanticCustomError(
+                "value_error",
+                "Must be a valid ISO format datetime string",
+            )
 
         # Treat naive datetimes as UTC
         if valid_until_datetime.tzinfo is None:
             valid_until_datetime = valid_until_datetime.replace(tzinfo=UTC)
 
         if valid_until_datetime < datetime.now(UTC):
-            raise ValueError("Must be in the future")
+            raise PydanticCustomError(
+                "value_error",
+                "Must be in the future",
+            )
 
         return v
 
