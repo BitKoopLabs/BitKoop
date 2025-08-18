@@ -51,12 +51,14 @@ async def lifespan(app: FastAPI):
             pass
     yield
 
+ENV = os.getenv("ENV")
 
 app = FastAPI(
     title=APP_TITLE,
     description="API for validating coupon codes and managing miner sessions",
     version=version,
     lifespan=lifespan,
+    docs_url=None if ENV == "prod" else "/docs",
 )
 
 
