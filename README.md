@@ -50,7 +50,7 @@ We aim to capture market share by delivering **verified value** in a space domin
 
 ## How BitKoop Works
 - **Miners** – Find and submit working coupons.
-- **Validators** – Verify discount codes submitted by miners.
+- **Validators** – Verify coupons submitted by miners and score them accordingly.
 
 ---
 
@@ -92,7 +92,7 @@ We aim to capture market share by delivering **verified value** in a space domin
 
 **Phase 3**
 - New miner task: Build/maintain website configs
-- Onboard multiple e-commerce stores
+- Onboard hundreds of e-commerce stores across global markets
 
 ---
 
