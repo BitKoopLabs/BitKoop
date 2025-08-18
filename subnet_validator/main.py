@@ -51,14 +51,14 @@ async def lifespan(app: FastAPI):
             pass
     yield
 
-ENV = os.getenv("ENV")
+SUBTENSOR_NETWORK = os.getenv("SUBTENSOR_NETWORK")
 
 app = FastAPI(
     title=APP_TITLE,
     description="API for validating coupon codes and managing miner sessions",
     version=version,
     lifespan=lifespan,
-    docs_url=None if ENV == "prod" else "/docs",
+    docs_url=None if SUBTENSOR_NETWORK == "finney" else "/docs",
 )
 
 
