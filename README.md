@@ -1,5 +1,7 @@
 # BitKoop
 
+![BitKoop Logo](./docs/assets/logo.png)
+
 ## Guides
 - **Mining:** [docs/mining.md](https://github.com/BitKoopLabs/BitKoop/blob/main/docs/mining.md)  
 - **Validating:** [docs/validating.md](https://github.com/BitKoopLabs/BitKoop/blob/main/docs/validating.md)
