@@ -1,6 +1,6 @@
 # BitKoop
 
-![BitKoop Logo](./docs/assets/logo.png)
+<img src="./docs/assets/logo.png" alt="BitKoop Logo" width="50%">
 
 ## Guides
 - **Mining:** [docs/mining.md](https://github.com/BitKoopLabs/BitKoop/blob/main/docs/mining.md)  
