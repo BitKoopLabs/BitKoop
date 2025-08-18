@@ -36,14 +36,26 @@ Interface: Use the BitKoop Miner CLI to interact with validators
 
 ---
 
-### 3) Containers (future; not implemented yet)
+### 3) JSON configuration creation and maintenance (future; not implemented yet)
 
-You will be able to submit per-website containers that validators use to test codes:
-- Fully automated; simulate real-user flow (navigate, add to cart, apply code, etc.)
-- Export a proof bundle that validators can verify
-- Start from a small default template; keep image size limited
-- Test locally with a real working code before submitting
+You will be able to submit a per-website JSON configuration that validators use to test promo codes.
+
+Two execution modes will be supported: fully automated real-user flow simulation or direct API request.
 
 Details and templates will be published later.
+
+#### How we plan it will work
+
+- Download the Node.js project with the validation script.
+- Create a JSON file for your target website.
+- Add an `events` object that defines the automated flow to:
+  - add an item to cart
+  - proceed through checkout
+  - reveal the coupon input field
+  Each step will include a selector and an action (`click`, `select`, `fill`).
+- Add a `resultCheck` object with:
+  - a selector where the script can read the outcome text
+  - unique text pattern that indicate “valid” coupon state
+- Test locally with a real, working code before submitting.
 
 
