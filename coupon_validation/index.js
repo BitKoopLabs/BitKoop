@@ -63,6 +63,10 @@ let page;
                 console.log('e',e);
                 log('[❌❌❌] There is a problem with the script.');
             }
+            const outputDir = './output';
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, {recursive: true});
+            }
             fs.writeFileSync('./output/result.json', JSON.stringify({logs, couponIsValid: couponIsValid}, null, 2));
         }else {
             log('[⏳] Starting headless-browser...');
