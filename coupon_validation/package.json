@@ -7,6 +7,7 @@
     "start": "node index.js --coupon=YOUR_COUPON --domain=YOUR_DOMAIN"
   },
   "dependencies": {
+    "axios": "^1.11.0",
     "dotenv": "^17.0.1",
     "playwright": "^1.53.2"
   }
