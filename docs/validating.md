@@ -61,6 +61,15 @@ Note: For subnet registration and system overview, see the main README.
 
 ---
 
+## 🖥️ Hardware Requirements
+
+- **Minimum**: 2 vCPU, 2–4 GB RAM
+- **Recommended**: 8+ vCPU, 8–16 GB RAM
+
+These values account for asyncio.gather-based concurrency, the Fiber framework overhead, and periodic headless Firefox sessions. For future multi-browser validation, plan for 8+ vCPU and 8–16 GB RAM.
+
+---
+
 ## 🛑 Alternative: Running Locally (Not Recommended)
 
 - The recommended way to run the validator is with Docker Compose.
