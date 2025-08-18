@@ -60,7 +60,6 @@ let page;
                     log('[❌❌❌] Coupon is not valid.');
                 }
             }catch (e) {
-                console.log('e',e);
                 log('[❌❌❌] There is a problem with the script.');
             }
             const outputDir = './output';
@@ -230,7 +229,6 @@ async function retryWaitForSelector(page, selector, options = {}, maxAttempts = 
         try {
             return await page.waitForSelector(selector, options);
         } catch (e) {
-            console.log('e',e);
             log(`🔁 Attempt ${attempt} failed for selector "${selector}"`);
             if (attempt === maxAttempts || !required) {
                 log(`Selector "${selector}" not found after ${maxAttempts} attempts.`);
