@@ -143,6 +143,31 @@ Replace `my_wallet` and `my_hotkey` with your actual wallet name and hotkey.
 
 ---
 
+## Proxy Setup for Validator
+
+Your validator can work without a proxy, but it is strongly recommended to use one. Without a proxy, the websites your validator processes will often block requests due to repeated traffic from the same IP address. This can significantly reduce your validator’s efficiency and performance.
+
+To prevent blocking, you should use residential proxies, preferably dynamic (rotating) ones. With dynamic proxies, the IP address changes on every request, which makes your validator appear as a normal user rather than automated traffic.
+
+A trusted service for residential proxies is [Proxy-Seller.io](https://proxy-seller.io). After purchasing, you will receive the following credentials:
+
+- `PROXY_SERVER` – the proxy host and port (e.g., us-residential.proxy-seller.io:12345)
+- `PROXY_USERNAME` – your proxy login username
+- `PROXY_PASSWORD` – your proxy login password
+
+You will need to add these values to your validator’s configuration. The recommended way is to set them in your `.env` file (see [`env.example`](../env.example)) so `docker-compose.yml` picks them up automatically:
+
+```env
+# .env
+PROXY_SERVER=us-residential.proxy-seller.io:12345
+PROXY_USERNAME=your_username
+PROXY_PASSWORD=your_password
+```
+
+Once configured, your validator will route all traffic through the proxy, reducing the risk of blocks and ensuring smooth, uninterrupted operation.
+
+---
+
 ## Configuration
 
 Most settings can be changed via environment variables used by `docker-compose.yml`:
