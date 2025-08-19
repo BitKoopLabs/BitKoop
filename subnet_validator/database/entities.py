@@ -37,7 +37,6 @@ class Site(Base):
     )
     base_url: Mapped[str] = mapped_column(
         String,
-        unique=True,
         nullable=False,
     )
     status: Mapped[SiteStatus] = mapped_column(
