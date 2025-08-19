@@ -3,7 +3,7 @@ from importlib.metadata import (
     PackageNotFoundError,
 )
 
-PREV_SPEC_VERSION = 500000
+PREV_SPEC_VERSION = 600000
 APP_TITLE = "BitKoop Validator"
 
 try:
