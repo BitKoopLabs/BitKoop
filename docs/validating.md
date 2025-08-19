@@ -170,9 +170,9 @@ Your validator can work without a proxy, but it is strongly recommended to use o
 
 To prevent blocking, you should use residential proxies, preferably dynamic (rotating) ones. With dynamic proxies, the IP address changes on every request, which makes your validator appear as a normal user rather than automated traffic.
 
-A trusted service for residential proxies is [Proxy-Seller.io](https://proxy-seller.io). After purchasing, you will receive the following credentials:
+A trusted service for residential proxies is [Proxy-Seller.com](https://proxy-seller.com/). After purchasing, you will receive the following credentials:
 
-- `PROXY_SERVER` – the proxy host and port (e.g., us-residential.proxy-seller.io:12345)
+- `PROXY_SERVER` – the proxy host and port (e.g., us-residential.proxy-seller.com:12345)
 - `PROXY_USERNAME` – your proxy login username
 - `PROXY_PASSWORD` – your proxy login password
 
@@ -180,7 +180,7 @@ You will need to add these values to your validator’s configuration. The recom
 
 ```env
 # .env
-PROXY_SERVER=us-residential.proxy-seller.io:12345
+PROXY_SERVER=us-residential.proxy-seller.com:12345
 PROXY_USERNAME=your_username
 PROXY_PASSWORD=your_password
 ```
