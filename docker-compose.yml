@@ -33,6 +33,9 @@ services:
       - PROXY_SERVER=${PROXY_SERVER:-}
       - PROXY_USERNAME=${PROXY_USERNAME:-}
       - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+      - WALLET_NAME=${WALLET_NAME:-default}
+      - WALLET_HOTKEY=${WALLET_HOTKEY:-default}
+      - WALLET_PATH=${WALLET_PATH:-~/.bittensor/wallets/}
     volumes:
       - ~/.bittensor:/root/.bittensor
       - ./data:/app/data
