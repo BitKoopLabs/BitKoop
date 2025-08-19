@@ -29,7 +29,6 @@ class Settings(BaseSettings):
     submit_window: timedelta = timedelta(minutes=2)
     coupon_weight: float = 0.8
     container_weight: float = 0.2
-    supervisor_api_url: str = "http://91.99.203.36/api"
     min_weight_stake: float = 1000.0
     sync_coupons_use_gather: bool = True
     wallet_name: str = "default"
@@ -46,3 +45,7 @@ class Settings(BaseSettings):
         return constants.NETWORK_TO_NETUID[self.subtensor_network]
 
     model_config = SettingsConfigDict(env_file=".env")
+
+    @property
+    def supervisor_api_url(self) -> str:
+        return constants.SUPERVISOR_API_URL[self.subtensor_network]
