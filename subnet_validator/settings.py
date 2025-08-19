@@ -8,6 +8,7 @@ from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
 )
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     min_weight_stake: float = 1000.0
     sync_coupons_use_gather: bool = True
     wallet_name: str = "default"
-    hotkey_name: str = "default"
+    hotkey_name: str = Field(default="default", alias="WALLET_HOTKEY")
     # Peer sync preflight
     respect_peer_sync: bool = True
     peer_sync_preflight_max_wait: timedelta = timedelta(seconds=15)
