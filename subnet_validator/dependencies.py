@@ -134,7 +134,7 @@ def get_weight_calculator_service(
 
 
 def get_coupon_validator(site: Site, settings: Annotated[Settings, Depends(get_settings)]) -> PlaywrightCouponValidator:
-    if settings.env == "prod":
+    if settings.env == "production":
         return PlaywrightCouponValidator(
             site=site,
             path=Path.cwd() / "coupon_validation" / "index.js",
