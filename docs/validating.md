@@ -154,6 +154,19 @@ Replace `my_wallet` and `my_hotkey` with your actual wallet name and hotkey.
 
 ## Proxy Setup for Validator
 
+⚠️ Important
+
+1. First, purchase a proxy package.
+   - Please watch the attached video tutorial.
+   - Make sure to select the exact parameters shown in the video.
+
+   <video controls width="720">
+     <source src="assets/proxy.mp4?raw=1" type="video/mp4">
+     Your browser does not support the video tag. You can download and watch the video here: assets/proxy.mp4
+   </video>
+
+2. Once the proxy is purchased, continue with the step-by-step setup instructions for the validator provided in this guide.
+
 Your validator can work without a proxy, but it is strongly recommended to use one. Without a proxy, the websites your validator processes will often block requests due to repeated traffic from the same IP address. This can significantly reduce your validator’s efficiency and performance.
 
 To prevent blocking, you should use residential proxies, preferably dynamic (rotating) ones. With dynamic proxies, the IP address changes on every request, which makes your validator appear as a normal user rather than automated traffic.
