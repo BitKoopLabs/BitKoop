@@ -160,10 +160,9 @@ Replace `my_wallet` and `my_hotkey` with your actual wallet name and hotkey.
    - Please watch the attached video tutorial.
    - Make sure to select the exact parameters shown in the video.
 
-   <video controls width="720">
-     <source src="assets/proxy.mp4?raw=1" type="video/mp4">
-     Your browser does not support the video tag. You can download and watch the video here: assets/proxy.mp4
-   </video>
+   ![Proxy tutorial](./assets/proxy.gif)
+
+   [Watch in MP4](./assets/proxy.mp4)
 
 2. Once the proxy is purchased, continue with the step-by-step setup instructions for the validator provided in this guide.
 
