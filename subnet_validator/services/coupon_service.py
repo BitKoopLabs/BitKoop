@@ -466,16 +466,16 @@ class CouponService:
         )
 
         if not coupon:
-            raise ValueError(f"Coupon code {request.code} does not exist.")
+            raise ValueError(f"Coupon code \"{request.code}\" does not exist.")
         
         if coupon.deleted_at is not None:
             raise ValueError(
-                f"The coupon '{request.code}' seems to be deleted by owner."
+                f"The coupon \"{request.code}\" seems to be deleted by owner."
             )
 
         if coupon.status != CouponStatus.INVALID:
             raise ValueError(
-                f"You can only recheck invalid coupons. Coupon code {request.code} is not invalid."
+                f"You can only recheck invalid coupons. Coupon code \"{request.code}\" is not invalid."
             )
 
         if (
@@ -483,8 +483,10 @@ class CouponService:
             and coupon.last_checked_at.replace(tzinfo=UTC)
             > datetime.now(UTC) - self.recheck_interval
         ):
+            next_check_time = coupon.last_checked_at.replace(tzinfo=UTC) + self.recheck_interval
             raise ValueError(
-                f"You can request code re-validation only once every {int(self.recheck_interval.total_seconds() / 3600)} hours."
+                f"You can request code re-validation only once every {int(self.recheck_interval.total_seconds() / 3600)} hours.\n"
+                f"Please try again later (after {next_check_time})."
             )
 
         return coupon
@@ -508,10 +510,10 @@ class CouponService:
             .first()
         )
         if not coupon:
-            raise ValueError(f"Coupon code {request.code} does not exist.")
+            raise ValueError(f"Coupon code \"{request.code}\" does not exist.")
         if coupon.deleted_at is not None:
             raise ValueError(
-                f"Coupon code {request.code} has already been deleted."
+                f"Coupon code \"{request.code}\" has already been deleted."
             )
         return coupon
 
@@ -554,7 +556,7 @@ class CouponService:
             .first()
         )
         if coupon:
-            raise ValueError(f"Coupon code {request.code} already exists.")
+            raise ValueError(f"Coupon code \"{request.code}\" already exists.")
         # 4. Check if site has reached the max coupons limit
         coupons = (
             self.db.query(Coupon)
