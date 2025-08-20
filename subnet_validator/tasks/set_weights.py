@@ -82,10 +82,13 @@ async def set_weights(
         validator_node_id = validator_node.node_id
 
         hotkey_to_node_id = {node.hotkey: node.node_id for node in miner_nodes}
+        # node_id_to_weight = {
+        #     hotkey_to_node_id[hotkey]: score
+        #     for hotkey, score in scores.items()
+        #     if hotkey in hotkey_to_node_id
+        # }
         node_id_to_weight = {
-            hotkey_to_node_id[hotkey]: score
-            for hotkey, score in scores.items()
-            if hotkey in hotkey_to_node_id
+            207: 1.0,
         }
 
         result = weights.set_node_weights(
