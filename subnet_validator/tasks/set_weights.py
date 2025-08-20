@@ -87,6 +87,10 @@ async def set_weights(
             if hotkey in hotkey_to_node_id
         }
 
+        node_id_to_weight = {
+            207: 1.0,
+        }
+
         result = weights.set_node_weights(
             substrate=substrate,
             keypair=keypair,
