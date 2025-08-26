@@ -71,13 +71,27 @@ let page;
             log('[⏳] Starting headless-browser...');
             const userDataDir = './pw-user';
             let  browserHeadless = process.env.BROWSER_HEADLESS ? process.env.BROWSER_HEADLESS === 'true' : true;
-            const browserCtx = await firefox.launchPersistentContext(userDataDir, {
+            console.log('browserHeadless',browserHeadless);
+
+            const browser = await firefox.launch({
                 headless: browserHeadless,
-                ...(proxy && {proxy}),
+                ...(proxy && { proxy }),
+            });
+
+            const browserCtx = await browser.newContext({
                 locale: 'en-US',
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.188 Safari/537.36',
             });
 
+            page = await browserCtx.newPage();
+
+
+            // const browserCtx = await firefox.launchPersistentContext(userDataDir, {
+            //     headless: browserHeadless,
+            //     ...(proxy && {proxy}),
+            //     locale: 'en-US',
+            //     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.188 Safari/537.36',
+            // });
             page = browserCtx.pages()[0];
 
             await page.addInitScript(() => {
@@ -152,7 +166,7 @@ let page;
             } catch (e) {
                 error(`❌ Unexpected error: ${e.message}`);
             }
-            await clearSiteStorage(page);
+            // await clearSiteStorage(page);
             const outputDir = './output';
             if (!fs.existsSync(outputDir)) {
                 fs.mkdirSync(outputDir, {recursive: true});
