@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     database_url: str
     env: str = "dev"
     subtensor_network: str = "finney"
-    max_coupons_per_site: int = 3
+    max_coupons_per_site: int = 8
     recheck_interval: timedelta = timedelta(days=1)
     resubmit_interval: timedelta = timedelta(days=1)
     validate_coupons_interval: timedelta = timedelta(minutes=1)
