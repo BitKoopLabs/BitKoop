@@ -166,8 +166,7 @@ class SiteService:
             sites_info.append({
                 "id": site.id,
                 "base_url": site.base_url,
-                "status": site.status.value,
-                "status_name": site.status.name,
+                "status": site.status,
                 "miner_hotkey": site.miner_hotkey,
                 "total_coupon_slots": site.total_coupon_slots,
                 "available_slots": site.available_slots,
