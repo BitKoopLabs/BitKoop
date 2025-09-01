@@ -29,6 +29,7 @@ class Site(BaseModel):
     store_status: int  # 0 = inactive, 1 = active, 2 = pending
     miner_hotkey: str | None = None
     config: dict | None = None
+    total_coupon_slots: int = 15  # Default to 15 slots
 
 
 class ProductCategory(BaseModel):

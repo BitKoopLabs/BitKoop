@@ -16,6 +16,7 @@ from .routes import (
     test,
     weights,
     info,
+    sites,
 )
 from . import (
     __version__ as version,
@@ -94,4 +95,10 @@ app.include_router(
     info.router,
     prefix="/info",
     tags=["info"],
+)
+
+app.include_router(
+    sites.router,
+    prefix="/sites",
+    tags=["sites"],
 )

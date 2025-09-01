@@ -34,6 +34,10 @@ from .services.dynamic_config_service import (
     DynamicConfigService,
 )
 
+from .services.site_service import (
+    SiteService,
+)
+
 from .database.database import (
     get_db,
 )
@@ -77,6 +81,15 @@ def get_category_service(
     return CategoryService(db)
 
 
+def get_site_service(
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+):
+    return SiteService(db)
+
+
 def get_coupon_service(
     db: Annotated[
         Session,
@@ -94,12 +107,17 @@ def get_coupon_service(
         DynamicConfigService,
         Depends(get_dynamic_config_service),
     ],
+    site_service: Annotated[
+        SiteService,
+        Depends(get_site_service),
+    ],
 ):
     return CouponService(
         db,
         metagraph_service,
         dynamic_config_service,
-        settings.max_coupons_per_site,
+        site_service,
+        settings.max_coupons_per_site_per_miner,
         settings.recheck_interval,
         settings.resubmit_interval,
         settings.submit_window,

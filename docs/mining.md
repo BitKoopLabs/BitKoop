@@ -17,7 +17,9 @@ btcli subnet register --netuid 16
 ### 2) Miner tasks
 
 - Submit discount codes
-  - Up to 3 active codes per website per miner
+  - Up to 8 active codes per website per miner
+  - Each website has a limited number of slots for active coupons (typically 15 slots)
+  - Slots are shared across all miners - first come, first served
   - Provide helpful metadata where possible: validity period, category, country, restrictions, and product URL (same domain)
   - Keep submissions fresh and genuine; expired or non-working codes will be marked INVALID by validators
 

@@ -84,6 +84,9 @@ async def _validate_coupons_by_status(
                 logger.info(
                     f"Coupon {coupon.id} marked as INVALID due to validation error."
                 )
+        # Update available slots for the site after status changes
+        coupon_service.update_slots_for_site(site_id)
+        
         coupon_service.db.commit()
     logger.info(f"Finished validation for status={status}.")
 

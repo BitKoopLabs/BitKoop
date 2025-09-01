@@ -41,6 +41,7 @@ from subnet_validator.dependencies import (
     get_dynamic_config_service,
     get_settings,
     get_coupon_service,
+    get_site_service,
     get_validator_sync_offset_service,
     get_weight_calculator_service,
     get_metagraph_service,
@@ -223,10 +224,12 @@ if __name__ == "__main__":
     dynamic_config_service = get_dynamic_config_service(
         db=db,
     )
+    site_service = get_site_service(db=db)
     coupon_service = get_coupon_service(
         db=db,
         settings=settings,
         metagraph_service=metagraph_service,
+        site_service=site_service,
         dynamic_config_service=dynamic_config_service,
     )
     category_service = get_category_service(db=db)

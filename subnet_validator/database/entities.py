@@ -52,6 +52,17 @@ class Site(Base):
         String,
         nullable=True,
     )
+    # Slot management for coupon submission
+    total_coupon_slots: Mapped[int] = mapped_column(
+        Integer,
+        default=15,
+        nullable=False,
+    )
+    available_slots: Mapped[int] = mapped_column(
+        Integer,
+        default=15,
+        nullable=False,
+    )
     coupons: Mapped[list["Coupon"]] = relationship(
         "Coupon",
         back_populates="site",
