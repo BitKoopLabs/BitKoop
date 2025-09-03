@@ -25,8 +25,10 @@ import re
 
 class HotkeyRequest(BaseModel):
     hotkey: str
+    coldkey: Optional[str] = None
+    use_coldkey_for_signature: Optional[bool] = None
 
-    @field_validator("hotkey")
+    @field_validator("hotkey", "coldkey")
     @classmethod
     def validate_ss58_address(
         cls,
@@ -40,7 +42,7 @@ class HotkeyRequest(BaseModel):
                 "Invalid ss58 address",
             )
         return v
-
+    
     model_config = ConfigDict(extra="allow")
 
 
@@ -202,6 +204,8 @@ class CouponResponse(BaseModel):
     status: CouponStatus
     source_hotkey: str
     miner_hotkey: str
+    miner_coldkey: Optional[str]
+    use_coldkey_for_signature: Optional[bool]
     valid_until: Optional[datetime]
     deleted_at: Optional[datetime]
     created_at: datetime

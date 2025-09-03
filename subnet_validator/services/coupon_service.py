@@ -655,6 +655,8 @@ class CouponService:
                 code=coupon_data.code,
                 submitted_at=coupon_data.last_action_date,
                 action=coupon_data.last_action,
+                coldkey=coupon_data.miner_coldkey,
+                use_coldkey_for_signature=coupon_data.use_coldkey_for_signature,
             )
             return is_signature_valid(typed_coupon_data, coupon_data.last_action_signature)
         except Exception:

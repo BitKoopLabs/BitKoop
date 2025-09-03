@@ -145,6 +145,14 @@ class Coupon(Base):
         primary_key=True,
         nullable=False,
     )
+    miner_coldkey: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+    use_coldkey_for_signature: Mapped[bool | None] = mapped_column(
+        Boolean,
+        nullable=True,
+    )
 
     last_action: Mapped[CouponAction] = mapped_column(
         Integer,
