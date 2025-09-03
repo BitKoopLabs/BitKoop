@@ -483,7 +483,7 @@ class CouponService:
                 f"Coupon was submitted outside the allowed {int(self.submit_window.total_seconds() / 60)}-minute time window."
             )
         if not from_sync:
-            if not self.metagraph_service.is_miner_hotkey_exists(request.hotkey):
+            if not self.metagraph_service.is_miner_hotkey_exists(request.hotkey, request.coldkey):
                 raise ValueError(
                     f"Miner hotkey {request.hotkey} does not registered in subnet."
                 )

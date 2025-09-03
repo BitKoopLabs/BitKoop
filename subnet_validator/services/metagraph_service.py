@@ -76,14 +76,18 @@ class MetagraphService:
         )
         return [self.to_node(node) for node in nodes]
 
-    def is_miner_hotkey_exists(self, hotkey: str) -> bool:
-        return (
+    def is_miner_hotkey_exists(self, hotkey: str, coldkey: str = None) -> bool:
+        query = (
             self.db.query(MetagraphNode)
             .filter(MetagraphNode.hotkey == hotkey)
             .filter(MetagraphNode.validator_version == None)
-            .first()
-            is not None
         )
+
+        if coldkey is not None:
+            query = query.filter(MetagraphNode.coldkey == coldkey)
+
+        return query.first() is not None
+
 
     def get_node_by_hotkey(self, hotkey: str) -> Optional[Node]:
         node = (
