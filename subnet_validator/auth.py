@@ -120,6 +120,8 @@ def verify_hotkey_signature(
         code=body.code,
         submitted_at=body.submitted_at,
         action=action,
+        coldkey=body.coldkey,
+        use_coldkey_for_signature=body.use_coldkey_for_signature,
     )
 
     # Verify signature of the typed request
