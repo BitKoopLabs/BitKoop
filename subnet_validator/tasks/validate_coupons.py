@@ -57,7 +57,7 @@ async def _validate_coupons_by_status(
     ) in coupons_by_site.items():
         logger.info(f"Processing {len(coupons)} coupons for site_id={site_id}")
         site = coupon_service.db.query(Site).filter(Site.id == site_id).first()
-        if not site or not site.config or site.status != SiteStatus.ACTIVE:
+        if not site or site.status != SiteStatus.ACTIVE:
             logger.warning(
                 f"Site config not found for site_id={site_id} or site is not active. Setting all coupons to PENDING."
             )
