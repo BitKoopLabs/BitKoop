@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     respect_peer_sync: bool = True
     peer_sync_preflight_max_wait: timedelta = timedelta(seconds=15)
     peer_sync_preflight_interval: timedelta = timedelta(seconds=3)
+    storefront_password: str | None = None
 
     @property
     def netuid(

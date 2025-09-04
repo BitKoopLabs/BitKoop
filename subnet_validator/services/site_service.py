@@ -36,6 +36,7 @@ class SiteService:
         store_status: int,
         miner_hotkey: str | None = None,
         config: dict | None = None,
+        api_url: str | None = None,
         total_coupon_slots: int = 15,
     ) -> Site:
         """
@@ -51,6 +52,7 @@ class SiteService:
             site.status = status
             site.miner_hotkey = miner_hotkey
             site.config = config
+            site.api_url = api_url
             site.total_coupon_slots = total_coupon_slots
             # Calculate available slots based on current coupon count
             self.update_available_slots(store_id)
@@ -74,6 +76,7 @@ class SiteService:
                 status=status,
                 miner_hotkey=miner_hotkey,
                 config=config,
+                api_url=api_url,
                 total_coupon_slots=total_coupon_slots,
                 available_slots=total_coupon_slots,
             )
@@ -168,6 +171,7 @@ class SiteService:
                 "base_url": site.base_url,
                 "status": site.status,
                 "miner_hotkey": site.miner_hotkey,
+                "api_url": site.api_url,
                 "total_coupon_slots": site.total_coupon_slots,
                 "available_slots": site.available_slots,
                 "can_submit_coupon": site.available_slots > 0,

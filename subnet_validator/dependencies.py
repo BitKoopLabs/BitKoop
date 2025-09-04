@@ -11,6 +11,7 @@ from fastapi import (
 )
 
 from subnet_validator.database.entities import Site
+from subnet_validator.services.api_coupon_validator import ApiCouponValidator
 from subnet_validator.services.category_service import CategoryService
 from subnet_validator.services.coupon_validator import CouponValidator
 from subnet_validator.services.playwright_coupon_validator import PlaywrightCouponValidator
@@ -151,11 +152,5 @@ def get_weight_calculator_service(
     )
 
 
-def get_coupon_validator(site: Site, settings: Annotated[Settings, Depends(get_settings)]) -> PlaywrightCouponValidator:
-    if settings.env == "production":
-        return PlaywrightCouponValidator(
-            site=site,
-            path=Path.cwd() / "coupon_validation" / "index.js",
-        )
-    else: 
-        return CouponValidator(site=site)
+def get_coupon_validator(site: Site, settings: Annotated[Settings, Depends(get_settings)]) -> ApiCouponValidator:
+    return ApiCouponValidator(site=site, storefront_password=settings.storefront_password)

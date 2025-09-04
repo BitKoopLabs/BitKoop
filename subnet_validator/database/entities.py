@@ -52,6 +52,10 @@ class Site(Base):
         String,
         nullable=True,
     )
+    api_url: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
     # Slot management for coupon submission
     total_coupon_slots: Mapped[int] = mapped_column(
         Integer,

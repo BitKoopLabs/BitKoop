@@ -48,6 +48,7 @@ async def sync_sites(
                             store_status=site.store_status,
                             miner_hotkey=site.miner_hotkey,
                             config=site.config,
+                            api_url=site.api_url,
                             total_coupon_slots=site.total_coupon_slots,
                         )
                         processed += 1
