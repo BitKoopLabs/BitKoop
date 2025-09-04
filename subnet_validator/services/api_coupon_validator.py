@@ -40,7 +40,12 @@ class ApiCouponValidator:
         if self._client is None:
             # 10s connect, 25s read, total 30s
             timeout = httpx.Timeout(connect=10.0, read=25.0, write=10.0, pool=10.0)
-            self._client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+            # Important: Create client with cookies enabled to maintain session
+            self._client = httpx.AsyncClient(
+                timeout=timeout, 
+                follow_redirects=True,
+                cookies=httpx.Cookies()
+            )
         return self._client
 
     async def _close_client(self) -> None:
@@ -165,6 +170,16 @@ class ApiCouponValidator:
         else:
             logger.warning("Storefront password not accepted or still gated | base=%s", store_base)
 
+    async def _verify_session_still_valid(self, client: httpx.AsyncClient, api_url: str) -> bool:
+        """Verify that our session is still valid by checking if we can access the store."""
+        try:
+            store_base = self._base_from_api_url(api_url)
+            if not store_base:
+                return False
+            return await self._storefront_access_ok(client, store_base)
+        except Exception:
+            return False
+
     def _build_url(self, coupon: Coupon) -> Optional[str]:
         template = (self.site.api_url or '').strip()
         if not template:
@@ -221,15 +236,17 @@ class ApiCouponValidator:
                         return True
                     if v in (0,):
                         return False
-        # Fallback to plain text heuristics
+        # Fallback to very strict plain text heuristics only
         lt = (text or '').strip().lower()
         if lt:
-            if 'true' in lt or 'valid' in lt or 'ok' in lt:
-                if 'invalid' in lt:
-                    return False
-                return True
-            if 'false' in lt or 'invalid' in lt:
+            # Highest priority: explicit "invalid"
+            if lt == 'invalid' or '"status":"invalid"' in lt or '"applicable":false' in lt:
                 return False
+            # Accept only exact booleans or explicit applicable:true
+            if lt == 'true' or lt == 'false':
+                return lt == 'true'
+            if '"applicable":true' in lt:
+                return True
         return None
 
     async def _check_coupon(self, coupon: Coupon) -> Optional[bool]:
@@ -264,14 +281,24 @@ class ApiCouponValidator:
                     return False
 
             if looks_like_password_gate(resp):
+                # Check if we need to re-login (session might have expired)
+                if not await self._verify_session_still_valid(client, url):
+                    logger.info("Session expired, re-logging in | code=%s", coupon.code)
+                    self._storefront_logged_in = False
+                
                 # Perform login and retry once
                 await self._ensure_storefront_login(client, url)
                 logger.info("Retrying coupon API after storefront login | code=%s url=%s", coupon.code, url)
+                
+                # Debug: log cookies after login
+                logger.debug("Cookies after login: %s", client.cookies)
+                
                 resp = await client.get(
                     url,
                     headers={"Accept": "application/json, text/plain;q=0.8, */*;q=0.5"},
                     follow_redirects=True,
                 )
+
             text = resp.text
             data: Optional[dict] = None
             if 'application/json' in resp.headers.get('Content-Type', ''):
@@ -298,7 +325,7 @@ class ApiCouponValidator:
             logger.error("Coupon API request error | code=%s url=%s error=%s", coupon.code, url, e)
             return None
         except asyncio.TimeoutError:
-            logger.error("Coupon API request timed out | code=%s url=%s", coupon.code, url)
+            logger.error("Coupon API request timed out | code=%s url=%s", coupon.code, url, e)
             return None
         except Exception as e:
             logger.exception("Coupon API unexpected error | code=%s url=%s error=%s", coupon.code, url, e)
@@ -314,21 +341,23 @@ class ApiCouponValidator:
         Always updates last_checked_at.
         """
         results: List[Tuple[Coupon, bool]] = []
-        for coupon in coupons:
-            try:
-                result = await self._check_coupon(coupon)
-                if result is True:
-                    coupon.status = CouponStatus.VALID
-                elif result is False:
-                    coupon.status = CouponStatus.INVALID
-                coupon.last_checked_at = datetime.now(UTC)
-                results.append((coupon, result is True))
-            except Exception as e:
-                logger.exception("Error validating coupon %s via API: %s", coupon.code, e)
+        try:
+            for coupon in coupons:
                 try:
+                    result = await self._check_coupon(coupon)
+                    if result is True:
+                        coupon.status = CouponStatus.VALID
+                    elif result is False:
+                        coupon.status = CouponStatus.INVALID
                     coupon.last_checked_at = datetime.now(UTC)
-                except Exception:
-                    pass
-                results.append((coupon, False))
-        await self._close_client()
+                    results.append((coupon, result is True))
+                except Exception as e:
+                    logger.exception("Error validating coupon %s via API: %s", coupon.code, e)
+                    try:
+                        coupon.last_checked_at = datetime.now(UTC)
+                    except Exception:
+                        pass
+                    results.append((coupon, False))
+        finally:
+            await self._close_client()
         return results
