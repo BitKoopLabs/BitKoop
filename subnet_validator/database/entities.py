@@ -134,6 +134,11 @@ class Coupon(Base):
         Boolean,
         nullable=True,
     )
+    # New: store Shopify rule JSON as-is from API response
+    rule: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
     status: Mapped[CouponStatus] = mapped_column(
         Integer,
         default=CouponStatus.PENDING,

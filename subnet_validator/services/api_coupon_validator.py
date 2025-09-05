@@ -342,6 +342,12 @@ class ApiCouponValidator:
                     except Exception:
                         data = None
             result = self._interpret_boolean_response(text, data)
+            # Persist rule JSON if present
+            try:
+                if isinstance(data, dict) and isinstance(data.get('rule'), dict):
+                    coupon.rule = data['rule']
+            except Exception:
+                pass
             if result is None:
                 if resp.status_code == 200 and result is None:
                     logger.debug("Coupon API returned 200 but no definitive result | code=%s", coupon.code)
