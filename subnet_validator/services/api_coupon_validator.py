@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from typing import List, Tuple, Optional
-from urllib.parse import quote
+from urllib.parse import quote, parse_qsl, urlencode, urlparse, urlunparse
 
 from datetime import UTC, datetime
 import httpx
@@ -60,11 +60,11 @@ class ApiCouponValidator:
     @staticmethod
     def _base_from_api_url(api_url: str) -> Optional[str]:
         try:
-            from urllib.parse import urlparse, urlunparse
-            u = urlparse(api_url)
+            from urllib.parse import urlparse as _urlparse, urlunparse as _urlunparse
+            u = _urlparse(api_url)
             if not u.scheme or not u.netloc:
                 return None
-            return urlunparse((u.scheme, u.netloc, "", "", "", ""))
+            return _urlunparse((u.scheme, u.netloc, "", "", "", ""))
         except Exception:
             return None
 
@@ -170,25 +170,25 @@ class ApiCouponValidator:
         else:
             logger.warning("Storefront password not accepted or still gated | base=%s", store_base)
 
-    async def _verify_session_still_valid(self, client: httpx.AsyncClient, api_url: str) -> bool:
-        """Verify that our session is still valid by checking if we can access the store."""
-        try:
-            store_base = self._base_from_api_url(api_url)
-            if not store_base:
-                return False
-            return await self._storefront_access_ok(client, store_base)
-        except Exception:
-            return False
-
     def _build_url(self, coupon: Coupon) -> Optional[str]:
         template = (self.site.api_url or '').strip()
         if not template:
             return None
         code_escaped = quote(coupon.code, safe='')
         try:
-            # Only {CODE} is supported at the moment
-            url = template.replace('{CODE}', code_escaped)
-            return url
+            # Replace {CODE} placeholder
+            url_str = template.replace('{CODE}', code_escaped)
+            # Append miner hotkey as hot_key query parameter for logging
+            try:
+                parsed = urlparse(url_str)
+                query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+                if getattr(coupon, 'miner_hotkey', None):
+                    query_params.setdefault('hot_key', coupon.miner_hotkey)
+                new_query = urlencode(query_params)
+                url_str = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+            except Exception as _e:
+                logger.debug("Failed to append hot_key to URL, proceeding without it | err=%s", _e)
+            return url_str
         except Exception as e:
             logger.warning("Failed to build URL from template | template=%s error=%s", template, e)
             return None
@@ -271,6 +271,16 @@ class ApiCouponValidator:
                 return True
         return None
 
+    async def _verify_session_still_valid(self, client: httpx.AsyncClient, api_url: str) -> bool:
+        """Verify that our session is still valid by checking if we can access the store."""
+        try:
+            store_base = self._base_from_api_url(api_url)
+            if not store_base:
+                return False
+            return await self._storefront_access_ok(client, store_base)
+        except Exception:
+            return False
+
     async def _check_coupon(self, coupon: Coupon) -> Optional[bool]:
         url = self._build_url(coupon)
         if not url:
@@ -346,7 +356,7 @@ class ApiCouponValidator:
         except httpx.RequestError as e:
             logger.error("Coupon API request error | code=%s url=%s error=%s", coupon.code, url, e)
             return None
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             logger.error("Coupon API request timed out | code=%s url=%s", coupon.code, url, e)
             return None
         except Exception as e:
