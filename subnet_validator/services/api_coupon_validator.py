@@ -204,10 +204,24 @@ class ApiCouponValidator:
         if isinstance(data, dict):
             lowered = {k.lower(): v for k, v in data.items()}
 
+            # Helper: if rule.is_for_all_customers is explicitly False → treat as invalid
+            def violates_all_customers_rule(payload: dict) -> bool:
+                try:
+                    rule = payload.get("rule") if isinstance(payload, dict) else None
+                    if isinstance(rule, dict):
+                        is_all = rule.get("is_for_all_customers")
+                        if isinstance(is_all, bool) and is_all is False:
+                            return True
+                except Exception:
+                    pass
+                return False
+
             # Shopify canonical format: { ok: true, applicable: true/false, status: 'valid'|'invalid', ... }
             ok_val = lowered.get('ok')
             applicable_val = lowered.get('applicable')
             if ok_val is True and isinstance(applicable_val, bool):
+                if applicable_val is True and violates_all_customers_rule(data):
+                    return False
                 return applicable_val
 
             # Fallback to 'status' field if present
@@ -215,6 +229,8 @@ class ApiCouponValidator:
             if isinstance(status_val, str):
                 sv = status_val.strip().lower()
                 if sv in ('valid', 'applicable', 'ok', 'active', 'enabled'):
+                    if violates_all_customers_rule(data):
+                        return False
                     return True
                 if sv in ('invalid', 'not_applicable', 'error'):
                     return False
@@ -224,15 +240,21 @@ class ApiCouponValidator:
             for key in candidates:
                 v = lowered.get(key.lower())
                 if isinstance(v, bool):
+                    if v is True and violates_all_customers_rule(data):
+                        return False
                     return v
                 if isinstance(v, str):
                     lv = v.strip().lower()
                     if lv in ('true', 'valid', 'ok', 'yes', '1'):
+                        if violates_all_customers_rule(data):
+                            return False
                         return True
                     if lv in ('false', 'invalid', 'no', '0'):
                         return False
                 if isinstance(v, (int, float)):
                     if v in (1,):
+                        if violates_all_customers_rule(data):
+                            return False
                         return True
                     if v in (0,):
                         return False
