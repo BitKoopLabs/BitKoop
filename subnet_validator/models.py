@@ -34,6 +34,8 @@ class HotkeyRequest(BaseModel):
         cls,
         v,
     ):
+        if v is None:
+            return v
         try:
             ss58_decode(v)
         except Exception:
