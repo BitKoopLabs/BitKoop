@@ -122,6 +122,8 @@ class CouponService:
             existing_coupon.last_action = CouponAction.CREATE
             existing_coupon.last_action_date = request.submitted_at
             existing_coupon.last_action_signature = signature
+            existing_coupon.miner_coldkey = request.coldkey
+            existing_coupon.use_coldkey_for_signature = request.use_coldkey_for_signature
 
             # Log action
             self._create_action_log(
@@ -160,6 +162,8 @@ class CouponService:
                 last_action=CouponAction.CREATE,
                 last_action_date=request.submitted_at,
                 last_action_signature=signature,
+                miner_coldkey=request.coldkey,
+                use_coldkey_for_signature=request.use_coldkey_for_signature,
             )
 
             self.db.add(coupon)
@@ -415,6 +419,8 @@ class CouponService:
                         last_action_signature=coupon_data.last_action_signature,
                         deleted_at=coupon_data.deleted_at,
                         status=status,
+                        miner_coldkey=coupon_data.miner_coldkey,
+                        use_coldkey_for_signature=coupon_data.use_coldkey_for_signature,
                     )
                     self.db.add(coupon)
                     self.db.flush()
@@ -441,7 +447,9 @@ class CouponService:
                         existing_coupon.last_action = coupon_data.last_action
                         existing_coupon.last_action_date = coupon_data.last_action_date
                         existing_coupon.last_action_signature = coupon_data.last_action_signature
-
+                        existing_coupon.miner_coldkey = coupon_data.miner_coldkey
+                        existing_coupon.use_coldkey_for_signature = coupon_data.use_coldkey_for_signature
+                        
                         # Update status based on last action
                         existing_coupon.status = (
                             CouponStatus.DELETED

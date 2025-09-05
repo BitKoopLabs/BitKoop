@@ -214,6 +214,7 @@ class CouponResponse(BaseModel):
     last_action: CouponAction
     last_action_date: int
     last_action_signature: str
+    rule: Optional[dict]
 
     model_config = ConfigDict(from_attributes=True)
 
