@@ -3,8 +3,10 @@ from fastapi import (
     HTTPException,
     Depends,
     Query,
+    Header,
 )
 from datetime import (
+    UTC,
     datetime,
 )
 from typing import (
@@ -35,6 +37,7 @@ from ..services.dynamic_config_service import (
 
 from ..auth import (
     verify_hotkey_signature,
+    verify_signature,
 )
 from ..models import (
     CouponRecheckRequest,
@@ -79,7 +82,7 @@ async def submit_code(
     except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=str(e),
+            detail=str("\n".join(e.args)),
         )
     except Exception as e:
         logger.error(
@@ -116,7 +119,46 @@ def get_coupons(
     sort_by: Literal["created_at", "updated_at", "last_action_date"] = Query(
         "updated_at"
     ),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> List[CouponResponse]:
+    # Optional peer auth: Authorization: hotkey.nonce.sig
+    bypass_submit_window = False
+    if authorization:
+        try:
+            parts = authorization.split(".")
+            if len(parts) != 3:
+                raise ValueError("Invalid Authorization format")
+            hotkey, nonce_str, sig_hex = parts
+            # nonce is millis timestamp
+            nonce_ms = int(nonce_str)
+            now_ms = int(datetime.now(UTC).timestamp() * 1000)
+            # settings.submit_window is a timedelta; treat it as max age for nonce
+            # We cannot inject settings here easily; infer window = 2 minutes default via service submit_window
+            window_ms = int(coupon_service.submit_window.total_seconds() * 1000)
+            if now_ms - nonce_ms > window_ms:
+                raise HTTPException(status_code=401, detail="Nonce expired")
+
+            validator_nodes = coupon_service.metagraph_service.get_validator_nodes()
+            validator_hotkeys = {node.hotkey for node in validator_nodes}
+            if hotkey not in validator_hotkeys:
+                raise HTTPException(status_code=401, detail="Hotkey not in validator nodes")
+
+            # Sign only hotkey and nonce
+            payload = {
+                "hotkey": hotkey,
+                "nonce": nonce_ms,
+            }
+            # Verify
+            import json
+            message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            if not verify_signature(hotkey, message, bytes.fromhex(sig_hex)):
+                raise HTTPException(status_code=401, detail="Invalid signature")
+            bypass_submit_window = True
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid Authorization header")
+
     return coupon_service.get_coupons(
         miner_hotkey=miner_hotkey,
         site_id=site_id,
@@ -127,6 +169,7 @@ def get_coupons(
         page_size=page_size,
         page_number=page_number,
         sort_by=sort_by,
+        bypass_submit_window=bypass_submit_window,
     )
 
 

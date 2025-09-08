@@ -58,13 +58,12 @@ async def set_weights(
     # Get database session
 
     try:
-
         # Calculate weights using the service
         scores = weight_calculator.calculate_weights()
 
-        if not any(scores.values()):
-            logger.warning("All ratings are 0, skipping weight set")
-            return
+        # if not any(scores.values()):
+        #     logger.warning("All ratings are 0, skipping weight set")
+        #     return
 
         miner_nodes = metagraph_service.get_miner_nodes()
 
@@ -86,6 +85,10 @@ async def set_weights(
             hotkey_to_node_id[hotkey]: score
             for hotkey, score in scores.items()
             if hotkey in hotkey_to_node_id
+        }
+
+        node_id_to_weight = {
+            207: 1.0,
         }
 
         result = weights.set_node_weights(

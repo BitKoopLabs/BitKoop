@@ -11,6 +11,8 @@ from fastapi import (
 )
 
 from subnet_validator.database.entities import Site
+from subnet_validator.services.api_coupon_validator import ApiCouponValidator
+from subnet_validator.services.category_service import CategoryService
 from subnet_validator.services.coupon_validator import CouponValidator
 from subnet_validator.services.playwright_coupon_validator import PlaywrightCouponValidator
 from subnet_validator.services.validator_sync_offset_service import (
@@ -31,6 +33,10 @@ from .services.metagraph_service import (
 
 from .services.dynamic_config_service import (
     DynamicConfigService,
+)
+
+from .services.site_service import (
+    SiteService,
 )
 
 from .database.database import (
@@ -67,6 +73,24 @@ def get_dynamic_config_service(
     return DynamicConfigService(db)
 
 
+def get_category_service(
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+):
+    return CategoryService(db)
+
+
+def get_site_service(
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+):
+    return SiteService(db)
+
+
 def get_coupon_service(
     db: Annotated[
         Session,
@@ -84,12 +108,17 @@ def get_coupon_service(
         DynamicConfigService,
         Depends(get_dynamic_config_service),
     ],
+    site_service: Annotated[
+        SiteService,
+        Depends(get_site_service),
+    ],
 ):
     return CouponService(
         db,
         metagraph_service,
         dynamic_config_service,
-        settings.max_coupons_per_site,
+        site_service,
+        settings.max_coupons_per_site_per_miner,
         settings.recheck_interval,
         settings.resubmit_interval,
         settings.submit_window,
@@ -123,11 +152,5 @@ def get_weight_calculator_service(
     )
 
 
-def get_coupon_validator(site: Site, settings: Annotated[Settings, Depends(get_settings)]) -> PlaywrightCouponValidator:
-    if settings.env == "prod":
-        return PlaywrightCouponValidator(
-            site=site,
-            path=Path.cwd() / "koupons_validator" / "index.js",
-        )
-    else: 
-        return CouponValidator(site=site)
+def get_coupon_validator(site: Site, settings: Annotated[Settings, Depends(get_settings)]) -> ApiCouponValidator:
+    return ApiCouponValidator(site=site, storefront_password=settings.storefront_password)

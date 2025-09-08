@@ -13,6 +13,7 @@ from datetime import (
 from typing import (
     Optional,
 )
+from pydantic_core import PydanticCustomError
 from scalecodec.utils.ss58 import (
     ss58_decode,
 )
@@ -24,19 +25,26 @@ import re
 
 class HotkeyRequest(BaseModel):
     hotkey: str
+    coldkey: Optional[str] = None
+    use_coldkey_for_signature: Optional[bool] = None
 
-    @field_validator("hotkey")
+    @field_validator("hotkey", "coldkey")
     @classmethod
     def validate_ss58_address(
         cls,
         v,
     ):
+        if v is None:
+            return v
         try:
             ss58_decode(v)
         except Exception:
-            raise ValueError("Invalid ss58 address")
+            raise PydanticCustomError(
+                "value_error",
+                "Invalid ss58 address",
+            )
         return v
-
+    
     model_config = ConfigDict(extra="allow")
 
 
@@ -57,12 +65,15 @@ class CouponActionRequest(HotkeyRequest):
     def validate_code_trimmed(cls, v):
         """Validate that coupon code is trimmed (no leading or trailing whitespace)."""
         if v != v.strip():
-            raise ValueError("Coupon code must not have leading or trailing whitespace")
+            raise PydanticCustomError(
+                "value_error",
+                "Coupon code must not have leading or trailing whitespace",
+            )
         # Allow only letters, numbers, hyphen-minus '-' and en dash '–'
         if not re.fullmatch(r"[A-Za-z0-9\-–]+", v):
-            raise ValueError(
-                "Only letters, numbers, hyphens and dashes are allowed.\n"
-                "If you believe this is incorrect or need assistance, feel free to contact us via the BitKoop community."
+            raise PydanticCustomError(
+                "value_error",
+                "Only letters, numbers, hyphens and dashes are allowed.\n",
             )
         return v
 
@@ -111,12 +122,10 @@ class CouponSubmitRequest(CouponActionRequest):
     ):
         if v is None:
             return v
-        try:
-            if pycountry.countries.get(alpha_2=v.upper()) is None:
-                raise ValueError
-        except Exception:
-            raise ValueError(
-                "country_code must be a valid ISO 3166-1 alpha-2 code"
+        if pycountry.countries.get(alpha_2=v.upper()) is None:
+            raise PydanticCustomError(
+                "value_error",
+                "Must be a valid ISO 3166-1 alpha-2 code",
             )
         return v.upper()
 
@@ -130,18 +139,36 @@ class CouponSubmitRequest(CouponActionRequest):
             return v
         try:
             # Parse ISO format datetime string
-            datetime.fromisoformat(v)
-            return v
-        except Exception:
-            raise ValueError(
-                "valid_until must be a valid ISO format datetime string"
+            valid_until_datetime = datetime.fromisoformat(v)
+        except (TypeError, ValueError):
+            raise PydanticCustomError(
+                "value_error",
+                "Must be a valid ISO format datetime string",
             )
+
+        # Treat naive datetimes as UTC
+        if valid_until_datetime.tzinfo is None:
+            valid_until_datetime = valid_until_datetime.replace(tzinfo=UTC)
+
+        if valid_until_datetime < datetime.now(UTC):
+            raise PydanticCustomError(
+                "value_error",
+                "Must be in the future",
+            )
+
+        return v
 
     def get_valid_until_datetime(self) -> Optional[datetime]:
         """Convert valid_until string to datetime object."""
         if self.valid_until is None:
             return None
-        return datetime.fromisoformat(self.valid_until)
+        value = self.valid_until
+        # Normalize 'Z' suffix to '+00:00' for fromisoformat compatibility
+        value = value.replace("Z", "+00:00") if isinstance(value, str) else value
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt
 
 
 class CouponSubmitResponse(BaseModel):
@@ -179,6 +206,8 @@ class CouponResponse(BaseModel):
     status: CouponStatus
     source_hotkey: str
     miner_hotkey: str
+    miner_coldkey: Optional[str]
+    use_coldkey_for_signature: Optional[bool]
     valid_until: Optional[datetime]
     deleted_at: Optional[datetime]
     created_at: datetime
@@ -187,6 +216,7 @@ class CouponResponse(BaseModel):
     last_action: CouponAction
     last_action_date: int
     last_action_signature: str
+    rule: Optional[dict]
 
     model_config = ConfigDict(from_attributes=True)
 

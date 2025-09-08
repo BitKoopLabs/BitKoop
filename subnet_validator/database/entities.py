@@ -37,7 +37,6 @@ class Site(Base):
     )
     base_url: Mapped[str] = mapped_column(
         String,
-        unique=True,
         nullable=False,
     )
     status: Mapped[SiteStatus] = mapped_column(
@@ -52,6 +51,21 @@ class Site(Base):
     miner_hotkey: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
+    )
+    api_url: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+    # Slot management for coupon submission
+    total_coupon_slots: Mapped[int] = mapped_column(
+        Integer,
+        default=15,
+        nullable=False,
+    )
+    available_slots: Mapped[int] = mapped_column(
+        Integer,
+        default=15,
+        nullable=False,
     )
     coupons: Mapped[list["Coupon"]] = relationship(
         "Coupon",
@@ -120,6 +134,11 @@ class Coupon(Base):
         Boolean,
         nullable=True,
     )
+    # New: store Shopify rule JSON as-is from API response
+    rule: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
     status: Mapped[CouponStatus] = mapped_column(
         Integer,
         default=CouponStatus.PENDING,
@@ -134,6 +153,14 @@ class Coupon(Base):
         String,
         primary_key=True,
         nullable=False,
+    )
+    miner_coldkey: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+    use_coldkey_for_signature: Mapped[bool | None] = mapped_column(
+        Boolean,
+        nullable=True,
     )
 
     last_action: Mapped[CouponAction] = mapped_column(
@@ -251,6 +278,10 @@ class MetagraphNode(Base):
     )
     validator_version: Mapped[str] = mapped_column(
         String,
+        nullable=True,
+    )
+    is_enough_weight: Mapped[bool] = mapped_column(
+        Boolean,
         nullable=True,
     )
 

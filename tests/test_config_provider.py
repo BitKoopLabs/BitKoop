@@ -9,7 +9,7 @@ from unittest.mock import (
     patch,
     AsyncMock,
 )
-from koupons_validator.models import (
+from coupon_validation.models import (
     Config,
     SiteConfig,
 )

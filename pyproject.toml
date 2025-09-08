@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bitkoop-validator"
-version = "0.1.0"
+version = "0.2.1"
 description = "Validator for BitKoop Subnet"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -13,7 +13,6 @@ authors = [
     { name = "Your Name", email = "your.email@example.com" }
 ]
 dependencies = [
-    "playwright==1.51.0",
     "pydantic>=2.0.0",
     "pydantic-settings==2.10.1",
     "fastapi==0.112.0",
@@ -24,6 +23,7 @@ dependencies = [
     "fiber[full] @ git+https://github.com/rayonlabs/fiber.git@2.4.1",
     "alembic>=1.16.0",
     "pycountry>=24.6.0",
+    "beautifulsoup4>=4.12.3",
 ]
 
 [project.optional-dependencies]

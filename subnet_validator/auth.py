@@ -43,7 +43,7 @@ def is_signature_valid(
 ) -> bool:
     try:
         message = json.dumps(
-            body.model_dump(mode="json"),
+            body.model_dump(mode="json", exclude_none=True),
             sort_keys=True,
             separators=(
                 ",",
@@ -51,8 +51,9 @@ def is_signature_valid(
             ),
         )
         logger.debug(f"Message: {message}, signature: {x_signature}")
+        key = body.coldkey if body.use_coldkey_for_signature else body.hotkey
         return verify_signature(
-            body.hotkey,
+            key,
             message,
             bytes.fromhex(x_signature),
         )
@@ -119,6 +120,8 @@ def verify_hotkey_signature(
         code=body.code,
         submitted_at=body.submitted_at,
         action=action,
+        coldkey=body.coldkey,
+        use_coldkey_for_signature=body.use_coldkey_for_signature,
     )
 
     # Verify signature of the typed request

@@ -18,7 +18,7 @@ Note: For subnet registration and system overview, see the main README.
 2. Download the latest `docker-compose.yml` from the official repository:
 
    ```sh
-   curl -L -o docker-compose.yml https://raw.githubusercontent.com/BitKoop-com/BitKoop/main/docker-compose.yml
+   curl -L -o docker-compose.yml https://raw.githubusercontent.com/BitKoopLabs/BitKoop/main/docker-compose.yml
    ```
 
 3. Start the validator (and watchtower) in the background:
@@ -61,6 +61,15 @@ Note: For subnet registration and system overview, see the main README.
 
 ---
 
+## 🖥️ Hardware Requirements
+
+- **Minimum**: 2 vCPU, 2–4 GB RAM
+- **Recommended**: 8+ vCPU, 8–16 GB RAM
+
+These values account for asyncio.gather-based concurrency, the Fiber framework overhead, and periodic headless Firefox sessions. For future multi-browser validation, plan for 8+ vCPU and 8–16 GB RAM.
+
+---
+
 ## 🛑 Alternative: Running Locally (Not Recommended)
 
 - The recommended way to run the validator is with Docker Compose.
@@ -72,7 +81,7 @@ If you still want to run locally:
 1. Clone the repository and set up your environment:
 
    ```sh
-   git clone https://github.com/BitKoop-com/BitKoop.git
+   git clone https://github.com/BitKoopLabs/BitKoop.git
    cd BitKoop
    python3 -m venv venv
    source venv/bin/activate
@@ -140,6 +149,43 @@ WALLET_NAME=my_wallet WALLET_HOTKEY=my_hotkey docker compose up -d
 ```
 
 Replace `my_wallet` and `my_hotkey` with your actual wallet name and hotkey.
+
+---
+
+## Proxy Setup for Validator
+
+⚠️ Important
+
+1. First, purchase a proxy package.
+   - Please watch the attached video tutorial.
+   - Make sure to select the exact parameters shown in the video.
+
+   ![Proxy tutorial](./assets/proxy.gif)
+
+   [Watch in MP4](./assets/proxy.mp4)
+
+2. Once the proxy is purchased, continue with the step-by-step setup instructions for the validator provided in this guide.
+
+Your validator can work without a proxy, but it is strongly recommended to use one. Without a proxy, the websites your validator processes will often block requests due to repeated traffic from the same IP address. This can significantly reduce your validator’s efficiency and performance.
+
+To prevent blocking, you should use residential proxies, preferably dynamic (rotating) ones. With dynamic proxies, the IP address changes on every request, which makes your validator appear as a normal user rather than automated traffic.
+
+A trusted service for residential proxies is [Proxy-Seller.com](https://proxy-seller.com/). After purchasing, you will receive the following credentials:
+
+- `PROXY_SERVER` – the proxy host and port (e.g., us-residential.proxy-seller.com:12345)
+- `PROXY_USERNAME` – your proxy login username
+- `PROXY_PASSWORD` – your proxy login password
+
+You will need to add these values to your validator’s configuration. The recommended way is to set them in your `.env` file (see [`env.example`](../env.example)) so `docker-compose.yml` picks them up automatically:
+
+```env
+# .env
+PROXY_SERVER=us-residential.proxy-seller.com:12345
+PROXY_USERNAME=your_username
+PROXY_PASSWORD=your_password
+```
+
+Once configured, your validator will route all traffic through the proxy, reducing the risk of blocks and ensuring smooth, uninterrupted operation.
 
 ---
 

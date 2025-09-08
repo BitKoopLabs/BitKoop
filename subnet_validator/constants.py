@@ -30,3 +30,8 @@ NETWORK_TO_NETUID = {
     constants.FINNEY_NETWORK: 16,
     constants.FINNEY_TEST_NETWORK: 368,
 }
+
+SUPERVISOR_API_URL = {
+    constants.FINNEY_NETWORK: "http://49.13.237.126/api",
+    constants.FINNEY_TEST_NETWORK: "http://91.99.203.36/api",
+}

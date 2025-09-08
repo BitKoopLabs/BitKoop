@@ -28,7 +28,9 @@ class Site(BaseModel):
     store_domain: str
     store_status: int  # 0 = inactive, 1 = active, 2 = pending
     miner_hotkey: str | None = None
+    api_url: str | None = None
     config: dict | None = None
+    total_coupon_slots: int = 15  # Default to 15 slots
 
 
 class ProductCategory(BaseModel):
@@ -77,7 +79,7 @@ class SupervisorApiClient:
         """
         params = {
             "page": page,
-            "page_size": page_size,
+            "limit": page_size,
         }
         url = f"{self.base_url}/sites"
         async with self._client as client:
@@ -97,7 +99,7 @@ class SupervisorApiClient:
         url = f"{self.base_url}/product-categories"
         params = {
             "page": page,
-            "page_size": page_size,
+            "limit": page_size,
         }
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             resp = await client.get(url, params=params)

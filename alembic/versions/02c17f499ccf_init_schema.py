@@ -45,6 +45,7 @@ def upgrade() -> None:
     sa.Column('protocol', sa.Integer(), nullable=False),
     sa.Column('port', sa.Integer(), nullable=False),
     sa.Column('validator_version', sa.String(), nullable=True),
+    sa.Column('is_enough_weight', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_metagraph_nodes_id'), 'metagraph_nodes', ['id'], unique=False)

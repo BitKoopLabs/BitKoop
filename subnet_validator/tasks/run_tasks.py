@@ -4,9 +4,11 @@ import time
 from fiber import (
     SubstrateInterface,
 )
+from subnet_validator.services.category_service import CategoryService
 from subnet_validator.services.coupon_service import (
     CouponService,
 )
+from subnet_validator.services.dynamic_config_service import DynamicConfigService
 from subnet_validator.services.validator_sync_offset_service import (
     ValidatorSyncOffsetService,
 )
@@ -35,9 +37,11 @@ from subnet_validator.tasks.set_weights import (
     set_weights,
 )
 from subnet_validator.dependencies import (
+    get_category_service,
     get_dynamic_config_service,
     get_settings,
     get_coupon_service,
+    get_site_service,
     get_validator_sync_offset_service,
     get_weight_calculator_service,
     get_metagraph_service,
@@ -62,7 +66,8 @@ async def run_tasks_in_order(
     validator_sync_offset_service: ValidatorSyncOffsetService,
     metagraph_service: MetagraphService,
     weight_calculator: WeightCalculatorService,
-    dynamic_config_service,
+    category_service: CategoryService,
+    dynamic_config_service: DynamicConfigService,
 ):
     """
     Run tasks sequentially in the required order, respecting their own intervals:
@@ -129,7 +134,7 @@ async def run_tasks_in_order(
         if is_due("categories", now_ts):
             try:
                 logger.info("Running: Sync categories")
-                await sync_categories(settings)
+                await sync_categories(settings, category_service)
             except Exception as e:
                 logger.error(f"Error in Sync categories: {e}", exc_info=True)
             finally:
@@ -219,12 +224,15 @@ if __name__ == "__main__":
     dynamic_config_service = get_dynamic_config_service(
         db=db,
     )
+    site_service = get_site_service(db=db)
     coupon_service = get_coupon_service(
         db=db,
         settings=settings,
         metagraph_service=metagraph_service,
+        site_service=site_service,
         dynamic_config_service=dynamic_config_service,
     )
+    category_service = get_category_service(db=db)
 
     async def main():
         await run_tasks_in_order(
@@ -234,6 +242,7 @@ if __name__ == "__main__":
             validator_sync_offset_service,
             metagraph_service,
             weight_calculator,
+            category_service,
             dynamic_config_service,
         )
 

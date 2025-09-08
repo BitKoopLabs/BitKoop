@@ -48,7 +48,7 @@ geckodriver.log
 chromedriver.log
 *.log
 screenshots/
-*.png
+# *.png
 *.jpg
 *.jpeg
 

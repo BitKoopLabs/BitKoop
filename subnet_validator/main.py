@@ -16,6 +16,7 @@ from .routes import (
     test,
     weights,
     info,
+    sites,
 )
 from . import (
     __version__ as version,
@@ -35,12 +36,14 @@ async def lifespan(app: FastAPI):
     db = next(db_gen)
     try:
         dynamic_config_service = dependencies.get_dynamic_config_service(db=db)
-        dynamic_config_service.set_sync_progress(
-            {
-                "status": "pending",
-                "started_at": datetime.now(UTC).isoformat(),
-            }
-        )
+        sync_progress = dynamic_config_service.get_sync_progress()
+        if not sync_progress:
+            dynamic_config_service.set_sync_progress(
+                {
+                    "status": "pending",
+                    "started_at": datetime.now(UTC).isoformat(),
+                }
+            )
     finally:
         # Ensure generator finalization (commit/close or rollback)
         try:
@@ -49,12 +52,14 @@ async def lifespan(app: FastAPI):
             pass
     yield
 
+SUBTENSOR_NETWORK = os.getenv("SUBTENSOR_NETWORK")
 
 app = FastAPI(
     title=APP_TITLE,
     description="API for validating coupon codes and managing miner sessions",
     version=version,
     lifespan=lifespan,
+    docs_url=None if SUBTENSOR_NETWORK == "finney" else "/docs",
 )
 
 
@@ -90,4 +95,10 @@ app.include_router(
     info.router,
     prefix="/info",
     tags=["info"],
+)
+
+app.include_router(
+    sites.router,
+    prefix="/sites",
+    tags=["sites"],
 )
