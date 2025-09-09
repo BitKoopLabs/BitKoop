@@ -204,6 +204,59 @@ class ApiCouponValidator:
         if isinstance(data, dict):
             lowered = {k.lower(): v for k, v in data.items()}
 
+            # If response provides validity window, enforce it strictly
+            def _parse_iso_datetime(value: object) -> Optional[datetime]:
+                try:
+                    if not isinstance(value, str):
+                        return None
+                    s = value.strip()
+                    if not s:
+                        return None
+                    # Support trailing Z
+                    if s.endswith('Z'):
+                        s = s[:-1] + '+00:00'
+                    dt = datetime.fromisoformat(s)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=UTC)
+                    else:
+                        dt = dt.astimezone(UTC)
+                    return dt
+                except Exception:
+                    return None
+
+            def _extract_validity_bounds(payload: dict) -> tuple[Optional[datetime], Optional[datetime]]:
+                starts_str: Optional[str] = None
+                ends_str: Optional[str] = None
+                try:
+                    if isinstance(payload, dict):
+                        raw_rule = payload.get('rule')
+                        rule_dict = raw_rule if isinstance(raw_rule, dict) else None
+                        v = payload.get('starts_at')
+                        if isinstance(v, str):
+                            starts_str = v
+                        elif rule_dict:
+                            v = rule_dict.get('starts_at')
+                            if isinstance(v, str):
+                                starts_str = v
+                        v = payload.get('ends_at')
+                        if isinstance(v, str):
+                            ends_str = v
+                        elif rule_dict:
+                            v = rule_dict.get('ends_at')
+                            if isinstance(v, str):
+                                ends_str = v
+                except Exception:
+                    pass
+                return _parse_iso_datetime(starts_str), _parse_iso_datetime(ends_str)
+
+            starts_dt, ends_dt = _extract_validity_bounds(data)
+            if starts_dt or ends_dt:
+                now_utc = datetime.now(UTC)
+                if starts_dt and now_utc < starts_dt:
+                    return False
+                if ends_dt and now_utc > ends_dt:
+                    return False
+
             # Helper: if rule.is_for_all_customers is explicitly False → treat as invalid
             def violates_all_customers_rule(payload: dict) -> bool:
                 try:
