@@ -398,7 +398,7 @@ class ApiCouponValidator:
             # Persist rule JSON if present
             try:
                 if isinstance(data, dict) and isinstance(data.get('rule'), dict):
-                    coupon.rule = data['rule']
+                    coupon.rule = data
             except Exception:
                 pass
             if result is None:
