@@ -69,12 +69,6 @@ class CouponActionRequest(HotkeyRequest):
                 "value_error",
                 "Coupon code must not have leading or trailing whitespace",
             )
-        # Allow only letters, numbers, hyphen-minus '-' and en dash '–'
-        if not re.fullmatch(r"[A-Za-z0-9\-–]+", v):
-            raise PydanticCustomError(
-                "value_error",
-                "Only letters, numbers, hyphens and dashes are allowed.\n",
-            )
         return v
 
     def get_submitted_at_datetime(self) -> datetime:
