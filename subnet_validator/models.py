@@ -62,13 +62,28 @@ class CouponActionRequest(HotkeyRequest):
 
     @field_validator("code")
     @classmethod
-    def validate_code_trimmed(cls, v):
-        """Validate that coupon code is trimmed (no leading or trailing whitespace)."""
-        if v != v.strip():
+    def validate_code_rules(cls, v):
+        """Validate coupon code according to rules:
+        - allow letters of any language and digits
+        - allow special symbols except URL-reserved: / ? # [ ] @ ! $ & ' ( ) * + , ; =
+        - forbid any whitespace characters
+        - max length enforced by Field
+        """
+        # Forbid any whitespace anywhere
+        if any(ch.isspace() for ch in v):
             raise PydanticCustomError(
                 "value_error",
-                "Coupon code must not have leading or trailing whitespace",
+                "Coupon code must not contain whitespace",
             )
+
+        # Forbid URL-reserved characters
+        reserved = set("/?#[]@!$&'()*+,;=")
+        if any(ch in reserved for ch in v):
+            raise PydanticCustomError(
+                "value_error",
+                "Coupon code contains forbidden URL-reserved characters",
+            )
+
         return v
 
     def get_submitted_at_datetime(self) -> datetime:
