@@ -1,10 +1,10 @@
 import json
+import os
 
 from fastapi import (
     HTTPException,
     Header,
     Request,
-    Depends,
 )
 from fiber import (
     Keypair,
@@ -20,8 +20,7 @@ from .models import (
     CouponRecheckRequest,
 )
 from .constants import CouponAction
-from .settings import Settings
-from .dependencies import get_settings
+ 
 from .exceptions import SignatureVerificationError
 
 from typing import Annotated
@@ -98,7 +97,6 @@ def get_action_from_path(
 def verify_hotkey_signature(
     body: CouponActionRequest,
     request: Request,
-    settings: Annotated[Settings, Depends(get_settings)],
     x_signature: str = Header(
         ...,
         alias="X-Signature",
@@ -133,7 +131,7 @@ def verify_hotkey_signature(
     # Verify signature of the typed request
     if not is_signature_valid(typed_request, x_signature):
         # When running UI integration in test environment, raise custom exception with debug context
-        if settings.env == "test":
+        if os.getenv("ENV") == "test":
             message = json.dumps(
                 typed_request.model_dump(mode="json", exclude_none=True),
                 sort_keys=True,
