@@ -4,6 +4,7 @@ from fastapi import (
     HTTPException,
     Header,
     Request,
+    Depends,
 )
 from fiber import (
     Keypair,
@@ -19,7 +20,11 @@ from .models import (
     CouponRecheckRequest,
 )
 from .constants import CouponAction
+from .settings import Settings
+from .dependencies import get_settings
+from .exceptions import SignatureVerificationError
 
+from typing import Annotated
 
 logger = get_logger(__name__)
 
@@ -93,6 +98,7 @@ def get_action_from_path(
 def verify_hotkey_signature(
     body: CouponActionRequest,
     request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
     x_signature: str = Header(
         ...,
         alias="X-Signature",
@@ -126,9 +132,38 @@ def verify_hotkey_signature(
 
     # Verify signature of the typed request
     if not is_signature_valid(typed_request, x_signature):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid signature",
-        )
+        # When running UI integration in test environment, raise custom exception with debug context
+        if settings.env == "test":
+            message = json.dumps(
+                typed_request.model_dump(mode="json", exclude_none=True),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            used_key = (
+                typed_request.coldkey
+                if typed_request.use_coldkey_for_signature
+                else typed_request.hotkey
+            )
+            context = {
+                "tips": [
+                    "Ensure the wallet used matches the selected key type (hotkey vs coldkey)",
+                    "Verify the exact canonical message string was signed (sorted keys, compact separators)",
+                    "Confirm the signature is hex-encoded without 0x prefix and passed in X-Signature",
+                    "Check request body fields match those used to create the signature (no extra or missing fields)",
+                    "Make sure timestamps (submitted_at) and ids (site_id) are identical across signer and request",
+                    "If using coldkey signing, set use_coldkey_for_signature=true and include coldkey",
+                    "Verify signature method uses the same crypto scheme as the verifier",
+                ],
+                "request_path": str(request.url.path),
+                "determined_action": action.value,
+                "used_key_type": "coldkey" if typed_request.use_coldkey_for_signature else "hotkey",
+                "used_key": used_key,
+                "x_signature": x_signature,
+                "canonical_message": message,
+                "typed_payload": typed_request.model_dump(mode="json", exclude_none=True),
+            }
+            raise SignatureVerificationError(context=context)
+
+        raise SignatureVerificationError()
 
     return x_signature

@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import (
     FastAPI,
 )
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import (
     CORSMiddleware,
 )
@@ -28,6 +29,7 @@ from .database.database import (
 from . import (
     dependencies,
 )
+from .exceptions import SignatureVerificationError
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -71,6 +73,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Exception handlers
+@app.exception_handler(SignatureVerificationError)
+async def signature_verification_error_handler(_, exc: SignatureVerificationError):
+    # If context is provided (test env), include it; otherwise, return a minimal body
+    body = {"detail": exc.message}
+    if exc.context:
+        body.update(exc.context)
+    return JSONResponse(status_code=401, content=body)
 
 # Include routers
 app.include_router(
