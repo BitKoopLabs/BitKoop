@@ -45,7 +45,7 @@ class HotkeyRequest(BaseModel):
             )
         return v
     
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", json_dumps_kwargs={"ensure_ascii": False})
 
 
 class CouponActionRequest(HotkeyRequest):
