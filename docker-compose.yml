@@ -43,6 +43,14 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     entrypoint: ["python", "-m", "subnet_validator.tasks.run_tasks"]
 
+  tlsn-http-verifier:
+    image: ghcr.io/bitkooplabs/bitkoop-tlsn-http-verifier:latest
+    environment:
+      - ADDR=0.0.0.0:8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
   watchtower:
     image: containrrr/watchtower
     volumes:
