@@ -1,6 +1,5 @@
 from datetime import (
     UTC,
-    datetime,
     timedelta,
 )
 from typing import (
@@ -10,7 +9,6 @@ from typing import (
     Callable,
 )
 from sqlalchemy import (
-    func,
     and_,
 )
 from sqlalchemy.orm import (
@@ -54,24 +52,9 @@ class WeightCalculatorService:
 
     def calculate_coupon_points(self, coupon: Coupon) -> int:
         """
-        Calculate points for a coupon based on its age.
-        - Coupons valid for less than delta_points: 100 points
-        - Coupons valid for delta_points or more: 200 points
+        Award a flat 100 points per valid coupon.
         """
-        now = datetime.now(UTC)
-
-        # Handle timezone-aware and timezone-naive datetimes
-        created_at = coupon.created_at
-        if created_at.tzinfo is None:
-            # If created_at is timezone-naive, assume it's in UTC
-            created_at = created_at.replace(tzinfo=UTC)
-
-        coupon_age = now - created_at
-
-        if coupon_age >= self.delta_points:
-            return 200
-        else:
-            return 100
+        return 100
 
     def get_valid_coupons(self) -> List[Coupon]:
         """

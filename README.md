@@ -64,8 +64,7 @@ We aim to capture market share by delivering **verified value** in a space domin
 
 ## Scoring Formula
 - **Points**:
-  - Coupon < 7 days old: **100 points**
-  - Coupon ≥ 7 days old: **200 points**
+  - Each valid coupon: **100 points**
 - **Combined score** = `coupon_weight * coupon_points`
 - **Normalization**: `min(1.0, round(points / MAX, 4))`
 
