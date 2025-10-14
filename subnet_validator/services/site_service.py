@@ -16,6 +16,11 @@ from subnet_validator.database.entities import (
     Site,
     Coupon,
 )
+from subnet_validator.clients.supervisor_client import Site as SupervisorSite
+from fiber.logging_utils import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SiteService:
@@ -193,3 +198,43 @@ class SiteService:
                 "has_prev_page": has_prev_page,
             }
         }
+
+    def add_sites(self, sites: list[SupervisorSite]) -> int:
+        """
+        Add or update multiple sites in bulk.
+        
+        Args:
+            sites: List of site objects with attributes:
+                - store_id: int
+                - store_domain: str
+                - store_status: int
+                - miner_hotkey: str | None
+                - config: dict | None
+                - api_url: str | None
+                - total_coupon_slots: int (default 15)
+        
+        Returns:
+            int: Number of sites successfully processed
+        """
+        processed = 0
+        
+        for site in sites:
+            try:
+                self.add_or_update_site(
+                    store_id=site.store_id,
+                    store_domain=site.store_domain,
+                    store_status=site.store_status,
+                    miner_hotkey=site.miner_hotkey,
+                    config=site.config,
+                    api_url=site.api_url,
+                    total_coupon_slots=site.total_coupon_slots,
+                )
+                processed += 1
+            except Exception as e:
+                # Log error but continue with other sites
+                logger.error(f"Failed to add/update site {site.store_id}: {e}")
+                continue
+        
+        # Commit all changes at once
+        self.db.commit()
+        return processed

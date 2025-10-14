@@ -12,12 +12,13 @@ from typing import List, Tuple, Callable, Optional
 from subnet_validator.constants import CouponStatus
 from fiber.logging_utils import get_logger
 from subnet_validator.database.entities import Coupon, Site
+from subnet_validator.services.validator.base import BaseCouponValidator
 
 
 logger = get_logger(__name__)
 
 
-class PlaywrightCouponValidator:
+class PlaywrightCouponValidator(BaseCouponValidator):
     def __init__(self, site: Site, path: Path):
         self.site = site
         self.node_script_path = path

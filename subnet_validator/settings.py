@@ -37,7 +37,14 @@ class Settings(BaseSettings):
     respect_peer_sync: bool = True
     peer_sync_preflight_max_wait: timedelta = timedelta(seconds=15)
     peer_sync_preflight_interval: timedelta = timedelta(seconds=3)
+    default_wait_interval: timedelta = timedelta(minutes=5)
     storefront_password: str | None = None
+    # Fiber nodes file path override
+    nodes_file: str = "data/nodes.json"
+    # Max concurrent requests for version fetching
+    max_concurrent_version_requests: int = 50
+    # TLSN verifier URL
+    tlsn_verifier_url: str = "http://127.0.0.1:8080/verify"
 
     @property
     def netuid(

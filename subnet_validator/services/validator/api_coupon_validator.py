@@ -14,12 +14,13 @@ from bs4 import BeautifulSoup
 from fiber.logging_utils import get_logger
 from subnet_validator.constants import CouponStatus
 from subnet_validator.database.entities import Coupon, Site
+from subnet_validator.services.validator.base import BaseCouponValidator
 
 
 logger = get_logger(__name__)
 
 
-class ApiCouponValidator:
+class ApiCouponValidator(BaseCouponValidator):
     """Validate coupons by calling a site's HTTP API.
 
     The site's `api_url` may contain the placeholder `{CODE}`, which will be replaced

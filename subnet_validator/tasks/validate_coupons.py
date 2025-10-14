@@ -10,9 +10,6 @@ from collections import (
 
 from subnet_validator.settings import Settings
 
-from ..services.coupon_validator import (
-    CouponValidator,
-)
 from .. import (
     dependencies,
 )
@@ -66,7 +63,11 @@ async def _validate_coupons_by_status(
                     coupon.status = CouponStatus.PENDING
                     coupon.last_checked_at = datetime.now(UTC)
             continue
-        validator = dependencies.get_coupon_validator(site, settings)
+        try:
+            validator = dependencies.get_coupon_validator(site, settings)
+        except ValueError as e:
+            logger.error(f"Error getting coupon validator for site_id={site_id}: {e}")
+            continue
         try:
             results = await validator.validate(coupons)
             valid_count = sum(1 for _, ok in results if ok)
@@ -93,8 +94,16 @@ async def _validate_coupons_by_status(
 
 async def validate_pending_coupons(
     coupon_service: CouponService,
-    settings: Settings,
+    context=None,
+    **kwargs
 ):
+    # Use context.get_settings() if available, otherwise fallback to direct call
+    if context:
+        settings = context.get_settings()
+    else:
+        from . import dependencies
+        settings = dependencies.get_settings()
+    
     logger.info("Running validate_pending_coupons task.")
     await _validate_coupons_by_status(
         coupon_service,
@@ -106,9 +115,17 @@ async def validate_pending_coupons(
 
 async def validate_outdated_coupon(
     coupon_service: CouponService,
-    settings: Settings,
     offset: timedelta = timedelta(days=1),
+    context=None,
+    **kwargs
 ):
+    # Use context.get_settings() if available, otherwise fallback to direct call
+    if context:
+        settings = context.get_settings()
+    else:
+        from . import dependencies
+        settings = dependencies.get_settings()
+    
     logger.info("Running validate_outdated_coupon task.")
     last_checked_to = datetime.now(UTC) - offset
     await _validate_coupons_by_status(

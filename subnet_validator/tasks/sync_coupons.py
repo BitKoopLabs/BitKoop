@@ -28,16 +28,36 @@ from pydantic import TypeAdapter
 
 
 async def sync_coupons(
-    settings: Settings,
-    coupon_service: CouponService,
-    validator_sync_offset_service: ValidatorSyncOffsetService,
-    metagraph_service: MetagraphService,
     is_first_sync: bool = False,
+    context=None,
+    **services
 ):
     logger = get_logger(__name__)
 
+    # Extract services from kwargs
+    coupon_service = services['coupon_service']
+    validator_sync_offset_service = services['validator_sync_offset_service']
+    
+    # Use context.get_settings() if available, otherwise fallback to direct call
+    if context:
+        settings = context.get_settings()
+    else:
+        from . import dependencies
+        settings = dependencies.get_settings()
+
     logger.info("Syncing coupons")
-    validator_nodes = metagraph_service.get_validator_nodes()
+    
+    # Get metagraph from context or factory config
+    if context:
+        metagraph = context.metagraph
+    else:
+        # Fallback to factory config
+        from . import dependencies
+        factory_config = dependencies.get_factory_config()
+        metagraph = factory_config.metagraph
+    
+    # Get validator nodes from metagraph
+    validator_nodes = metagraph.get_validator_nodes()
 
     keypair = chain_utils.load_hotkey_keypair(
         wallet_name=settings.wallet_name,

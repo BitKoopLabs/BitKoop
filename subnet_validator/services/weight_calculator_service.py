@@ -7,6 +7,7 @@ from typing import (
     Dict,
     List,
     Tuple,
+    Callable,
 )
 from sqlalchemy import (
     func,
@@ -31,16 +32,25 @@ class WeightCalculatorService:
     def __init__(
         self,
         db: Session,
-        coupon_weight: float = 0.8,
-        container_weight: float = 0.2,
-        delta_points: timedelta = timedelta(days=7),
+        get_settings: Callable,
     ):
         self.db = db
-        self.coupon_weight = coupon_weight  # 80% for coupon-related rewards
-        self.container_weight = (
-            container_weight  # 20% for container-related rewards
-        )
-        self.delta_points = delta_points  # 100 points for each delta
+        self.get_settings = get_settings
+    
+    @property
+    def coupon_weight(self) -> float:
+        """Get coupon weight from settings dynamically."""
+        return self.get_settings().coupon_weight
+    
+    @property
+    def container_weight(self) -> float:
+        """Get container weight from settings dynamically."""
+        return self.get_settings().container_weight
+    
+    @property
+    def delta_points(self) -> timedelta:
+        """Get delta points from settings dynamically."""
+        return self.get_settings().delta_points
 
     def calculate_coupon_points(self, coupon: Coupon) -> int:
         """
