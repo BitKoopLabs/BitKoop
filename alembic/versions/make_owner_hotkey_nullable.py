@@ -21,14 +21,22 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # Make owner_hotkey nullable in coupon_ownerships table
-    op.alter_column('coupon_ownerships', 'owner_hotkey',
-                    existing_type=sa.String(),
-                    nullable=True)
+    # Use batch_alter_table for SQLite compatibility (recreates table under the hood)
+    with op.batch_alter_table('coupon_ownerships') as batch_op:
+        batch_op.alter_column(
+            'owner_hotkey',
+            existing_type=sa.String(),
+            nullable=True,
+        )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # Make owner_hotkey non-nullable again
-    op.alter_column('coupon_ownerships', 'owner_hotkey',
-                    existing_type=sa.String(),
-                    nullable=False)
+    # Use batch_alter_table for SQLite compatibility (recreates table under the hood)
+    with op.batch_alter_table('coupon_ownerships') as batch_op:
+        batch_op.alter_column(
+            'owner_hotkey',
+            existing_type=sa.String(),
+            nullable=False,
+        )
