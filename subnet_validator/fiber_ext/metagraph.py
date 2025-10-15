@@ -22,15 +22,18 @@ class ExtendedMetagraph(BaseMetagraph):
 
     def sync_nodes(self) -> None:
         logger.info("Syncing nodes (extended)...")
-        assert self.substrate is not None, "Substrate interface is not initialized"
+        assert (
+            self.substrate is not None
+        ), "Substrate interface is not initialized"
         nodes = fetch_nodes._get_nodes_for_uid(self.substrate, self.netuid)
 
         # Enrich nodes with local fields if present in saved file or defaults
         enriched: dict[str, ExtendedNode] = {}
 
-
         # Build ExtendedNode objects first
-        exts: list[ExtendedNode] = [ExtendedNode(**n.model_dump()) for n in nodes]
+        exts: list[ExtendedNode] = [
+            ExtendedNode(**n.model_dump()) for n in nodes
+        ]
 
         # Fetch versions concurrently
         versions: dict[str, tuple[str | None, bool]] = asyncio.run(
@@ -44,7 +47,9 @@ class ExtendedMetagraph(BaseMetagraph):
             enriched[ext.hotkey] = ext
 
         self.nodes = enriched
-        logger.info(f"✅ Successfully synced {len(self.nodes)} nodes (extended)!")
+        logger.info(
+            f"✅ Successfully synced {len(self.nodes)} nodes (extended)!"
+        )
 
     # Override save/load to use custom path from settings
     def save_nodes(self) -> None:
@@ -84,10 +89,14 @@ class ExtendedMetagraph(BaseMetagraph):
         except FileNotFoundError:
             return {}
         except Exception as e:
-            logger.error(f"Error loading nodes from {nodes_file}: {e}  - will resync manually")
+            logger.error(
+                f"Error loading nodes from {nodes_file}: {e}  - will resync manually"
+            )
             return {}
 
-    async def _fetch_version_and_role(self, client: httpx.AsyncClient, node: ExtendedNode) -> tuple[str | None, bool]:
+    async def _fetch_version_and_role(
+        self, client: httpx.AsyncClient, node: ExtendedNode
+    ) -> tuple[str | None, bool]:
         ip = node.ip
         port = node.port
         if ip == "0.0.0.0":
@@ -105,31 +114,44 @@ class ExtendedMetagraph(BaseMetagraph):
         except Exception:
             return None, False
 
-    async def _fetch_versions_concurrently(self, nodes: list[ExtendedNode]) -> dict[str, tuple[str | None, bool]]:
+    async def _fetch_versions_concurrently(
+        self, nodes: list[ExtendedNode]
+    ) -> dict[str, tuple[str | None, bool]]:
         # Bound concurrency to avoid overload
         settings = dependencies.get_settings()
         max_concurrent = settings.max_concurrent_version_requests
         semaphore = asyncio.Semaphore(max_concurrent)
 
         async with httpx.AsyncClient(timeout=10) as client:
-            async def task(node: ExtendedNode) -> tuple[str, tuple[str | None, bool]]:
+
+            async def task(
+                node: ExtendedNode,
+            ) -> tuple[str, tuple[str | None, bool]]:
                 async with semaphore:
                     result = await self._fetch_version_and_role(client, node)
                     return node.hotkey, result
 
-            results = await asyncio.gather(*(task(n) for n in nodes), return_exceptions=False)
+            results = await asyncio.gather(
+                *(task(n) for n in nodes), return_exceptions=False
+            )
             return {hk: res for hk, res in results}
-    
+
     def get_miner_nodes(self) -> List[ExtendedNode]:
         """Get all miner nodes (nodes where is_validator=False)."""
-        return [node for node in self.nodes.values() if not getattr(node, 'is_validator', False)]
-    
+        return [
+            node
+            for node in self.nodes.values()
+            if not getattr(node, "is_validator", False)
+        ]
+
     def get_validator_nodes(self) -> List[ExtendedNode]:
         """Get all validator nodes (nodes where is_validator=True)."""
-        return [node for node in self.nodes.values() if getattr(node, 'is_validator', False)]
-    
+        return [
+            node
+            for node in self.nodes.values()
+            if getattr(node, "is_validator", False)
+        ]
+
     def get_node_by_hotkey(self, hotkey: str) -> Optional[ExtendedNode]:
         """Get a specific node by its hotkey."""
         return self.nodes.get(hotkey)
-
-

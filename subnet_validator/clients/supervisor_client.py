@@ -15,6 +15,7 @@ SUPERVISOR_BASE_URL = "http://91.99.203.36/api"
 
 T = TypeVar("T", bound=BaseModel)
 
+
 class PagedResponse(BaseModel, Generic[T]):
     page: int
     limit: int

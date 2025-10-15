@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     database_url: str
     env: str = "dev"
     subtensor_network: str = "finney"
-    max_coupons_per_site_per_miner: int = 8  # Maximum coupons per miner per site
+    max_coupons_per_site_per_miner: int = (
+        8  # Maximum coupons per miner per site
+    )
     recheck_interval: timedelta = timedelta(days=1)
     resubmit_interval: timedelta = timedelta(days=1)
     validate_coupons_interval: timedelta = timedelta(minutes=1)
@@ -45,6 +47,8 @@ class Settings(BaseSettings):
     max_concurrent_version_requests: int = 50
     # TLSN verifier URL
     tlsn_verifier_url: str = "http://127.0.0.1:8080/verify"
+    # If miner does not respond within this delta, drop ownership
+    lose_ownership_delta: timedelta = timedelta(hours=1)
 
     @property
     def netuid(

@@ -170,7 +170,7 @@ class Coupon(Base):
     )
     last_action_date: Mapped[int] = mapped_column(
         Integer,
-        nullable=False, 
+        nullable=False,
     )
     last_action_signature: Mapped[str] = mapped_column(
         String,

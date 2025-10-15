@@ -44,7 +44,7 @@ class HotkeyRequest(BaseModel):
                 "Invalid ss58 address",
             )
         return v
-    
+
     model_config = ConfigDict(extra="allow")
 
 
@@ -75,7 +75,6 @@ class CouponActionRequest(HotkeyRequest):
         """Convert submitted_at string to datetime object."""
         return datetime.fromtimestamp(self.submitted_at / 1000, UTC)
 
- 
 
 class CouponTypedActionRequest(CouponActionRequest):
     action: CouponAction
@@ -106,7 +105,6 @@ class CouponSubmitRequest(CouponActionRequest):
     is_global: Optional[bool] = None
     used_on_product_url: Optional[HttpUrl] = Field(None)
     valid_until: Optional[str] = None
-
 
     @field_validator("country_code")
     @classmethod
@@ -158,7 +156,9 @@ class CouponSubmitRequest(CouponActionRequest):
             return None
         value = self.valid_until
         # Normalize 'Z' suffix to '+00:00' for fromisoformat compatibility
-        value = value.replace("Z", "+00:00") if isinstance(value, str) else value
+        value = (
+            value.replace("Z", "+00:00") if isinstance(value, str) else value
+        )
         dt = datetime.fromisoformat(value)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=UTC)

@@ -7,7 +7,9 @@ import pytest
 
 from subnet_validator.database.entities import Site, Coupon
 from subnet_validator.constants import CouponStatus, CouponAction
-from subnet_validator.services.api_coupon_validator import ApiCouponValidator
+from subnet_validator.services.validator.api_coupon_validator import (
+    ApiCouponValidator,
+)
 
 
 @pytest.mark.asyncio
@@ -67,7 +69,9 @@ async def test_api_coupon_validator_valid_response():
     # Monkeypatch client creation to use our mock transport
     async def _get_or_create_client_override():
         if validator._client is None:
-            validator._client = httpx.AsyncClient(transport=transport, follow_redirects=True)
+            validator._client = httpx.AsyncClient(
+                transport=transport, follow_redirects=True
+            )
         return validator._client
 
     validator._get_or_create_client = _get_or_create_client_override  # type: ignore
@@ -139,7 +143,9 @@ async def test_api_coupon_validator_invalid_response():
 
     async def _get_or_create_client_override():
         if validator._client is None:
-            validator._client = httpx.AsyncClient(transport=transport, follow_redirects=True)
+            validator._client = httpx.AsyncClient(
+                transport=transport, follow_redirects=True
+            )
         return validator._client
 
     validator._get_or_create_client = _get_or_create_client_override  # type: ignore

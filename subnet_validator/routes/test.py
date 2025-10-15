@@ -9,7 +9,9 @@ from pydantic import (
 import json
 import os
 from typing import Annotated
-from subnet_validator.services.dynamic_config_service import DynamicConfigService
+from subnet_validator.services.dynamic_config_service import (
+    DynamicConfigService,
+)
 from subnet_validator.dependencies import get_dynamic_config_service
 
 router = APIRouter()
@@ -82,7 +84,7 @@ async def get_sync_status(
     dynamic_config_service: Annotated[
         DynamicConfigService,
         Depends(get_dynamic_config_service),
-    ]
+    ],
 ):
     try:
         progress = dynamic_config_service.get_sync_progress()

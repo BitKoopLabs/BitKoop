@@ -33,6 +33,7 @@ def test_nodes_file_path_override(tmp_path, monkeypatch):
 
     # Patch settings to point to our nodes file
     from subnet_validator import settings as app_settings
+
     app_settings.Settings.model_rebuild()
     s = app_settings.Settings(nodes_file=str(nodes_path))
 
@@ -45,5 +46,3 @@ def test_nodes_file_path_override(tmp_path, monkeypatch):
     node = mg.nodes["hk1"]
     assert getattr(node, "version") == "1.2.3"
     assert getattr(node, "is_validator") is True
-
-

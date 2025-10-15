@@ -6,7 +6,9 @@ import pytest
 
 from subnet_validator.database.entities import Site, Coupon
 from subnet_validator.constants import CouponAction
-from subnet_validator.services.api_coupon_validator import ApiCouponValidator
+from subnet_validator.services.validator.api_coupon_validator import (
+    ApiCouponValidator,
+)
 
 
 INTEGRATION_SITES = [
@@ -43,7 +45,9 @@ INVALID_CODES = [
 @pytest.mark.asyncio
 async def test_api_coupon_validator_integration_real_shops_with_known_codes():
     if os.getenv("RUN_INTEGRATION") != "1":
-        pytest.skip("Set RUN_INTEGRATION=1 to run integration tests against real Shopify stores")
+        pytest.skip(
+            "Set RUN_INTEGRATION=1 to run integration tests against real Shopify stores"
+        )
 
     storefront_password = os.getenv("SHOPIFY_STOREFRONT_PASSWORD", "1")
 
@@ -54,7 +58,9 @@ async def test_api_coupon_validator_integration_real_shops_with_known_codes():
             config={},
             api_url=site_info["api_url"],
         )
-        validator = ApiCouponValidator(site, storefront_password=storefront_password)
+        validator = ApiCouponValidator(
+            site, storefront_password=storefront_password
+        )
 
         # Validate known valid codes
         for code in site_info["valid_codes"]:
@@ -70,7 +76,9 @@ async def test_api_coupon_validator_integration_real_shops_with_known_codes():
             res = await validator.validate([coupon])
             assert len(res) == 1
             _, is_valid = res[0]
-            assert is_valid is True, f"Expected valid for {site_info['domain']} code={code}"
+            assert (
+                is_valid is True
+            ), f"Expected valid for {site_info['domain']} code={code}"
 
         # Validate common invalid codes
         for code in INVALID_CODES:
@@ -86,4 +94,6 @@ async def test_api_coupon_validator_integration_real_shops_with_known_codes():
             res = await validator.validate([coupon])
             assert len(res) == 1
             _, is_valid = res[0]
-            assert is_valid is False, f"Expected invalid for {site_info['domain']} code={code}"
+            assert (
+                is_valid is False
+            ), f"Expected invalid for {site_info['domain']} code={code}"

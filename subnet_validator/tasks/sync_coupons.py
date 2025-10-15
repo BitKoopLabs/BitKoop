@@ -27,35 +27,33 @@ from typing import List
 from pydantic import TypeAdapter
 
 
-async def sync_coupons(
-    is_first_sync: bool = False,
-    context=None,
-    **services
-):
+async def sync_coupons(is_first_sync: bool = False, context=None, **services):
     logger = get_logger(__name__)
 
     # Extract services from kwargs
-    coupon_service = services['coupon_service']
-    validator_sync_offset_service = services['validator_sync_offset_service']
-    
+    coupon_service = services["coupon_service"]
+    validator_sync_offset_service = services["validator_sync_offset_service"]
+
     # Use context.get_settings() if available, otherwise fallback to direct call
     if context:
         settings = context.get_settings()
     else:
         from . import dependencies
+
         settings = dependencies.get_settings()
 
     logger.info("Syncing coupons")
-    
+
     # Get metagraph from context or factory config
     if context:
         metagraph = context.metagraph
     else:
         # Fallback to factory config
         from . import dependencies
+
         factory_config = dependencies.get_factory_config()
         metagraph = factory_config.metagraph
-    
+
     # Get validator nodes from metagraph
     validator_nodes = metagraph.get_validator_nodes()
 
@@ -149,7 +147,9 @@ async def _sync_coupons_for_validators(
                         "ip": ip,
                         "port": port,
                         "status": "in_progress",
-                        "last_synced": last_synced.isoformat() if last_synced else None,
+                        "last_synced": (
+                            last_synced.isoformat() if last_synced else None
+                        ),
                     }
                 )
                 validators[hotkey] = node_progress
@@ -171,17 +171,27 @@ async def _sync_coupons_for_validators(
 
         # Preflight check: if peer is in first sync, skip it (only during our first sync)
         if is_first_sync and settings.respect_peer_sync:
-            max_wait = int(settings.peer_sync_preflight_max_wait.total_seconds())
-            interval = int(settings.peer_sync_preflight_interval.total_seconds())
+            max_wait = int(
+                settings.peer_sync_preflight_max_wait.total_seconds()
+            )
+            interval = int(
+                settings.peer_sync_preflight_interval.total_seconds()
+            )
             waited = 0
             try:
-                async with httpx.AsyncClient(timeout=5, follow_redirects=True) as client:
+                async with httpx.AsyncClient(
+                    timeout=5, follow_redirects=True
+                ) as client:
                     while waited < max_wait:
                         try:
-                            sync_resp = await client.get(f"{base_url}/info/sync")
+                            sync_resp = await client.get(
+                                f"{base_url}/info/sync"
+                            )
                             sync_resp.raise_for_status()
                             sync_json = sync_resp.json()
-                            peer_in_first_sync = bool(sync_json.get("progress"))
+                            peer_in_first_sync = bool(
+                                sync_json.get("progress")
+                            )
                             if peer_in_first_sync:
                                 logger.info(
                                     f"Skipping {hotkey} for now: peer is in first sync (waited {waited}s)"
@@ -231,7 +241,10 @@ async def _sync_coupons_for_validators(
                             empty_total += 1
                             if is_first_sync:
                                 try:
-                                    progress = dynamic_config_service.get_sync_progress() or {}
+                                    progress = (
+                                        dynamic_config_service.get_sync_progress()
+                                        or {}
+                                    )
                                     validators = progress.get("validators", {})
                                     node_progress = validators.get(hotkey, {})
                                     node_progress.update(
@@ -243,7 +256,9 @@ async def _sync_coupons_for_validators(
                                     )
                                     validators[hotkey] = node_progress
                                     progress["validators"] = validators
-                                    dynamic_config_service.set_sync_progress(progress)
+                                    dynamic_config_service.set_sync_progress(
+                                        progress
+                                    )
                                 except Exception as e:
                                     logger.error(
                                         f"Failed to update sync progress to done (no data) for {hotkey}: {e}"
@@ -255,7 +270,9 @@ async def _sync_coupons_for_validators(
                         validators_with_coupons_total += 1
                         node_had_coupons = True
 
-                    logger.info(f"Processing {len(coupons)} coupons from {hotkey}")
+                    logger.info(
+                        f"Processing {len(coupons)} coupons from {hotkey}"
+                    )
                     coupons_fetched_total += len(coupons)
                     node_coupons_fetched += len(coupons)
 
@@ -275,7 +292,10 @@ async def _sync_coupons_for_validators(
                         )
                         if is_first_sync:
                             try:
-                                progress = dynamic_config_service.get_sync_progress() or {}
+                                progress = (
+                                    dynamic_config_service.get_sync_progress()
+                                    or {}
+                                )
                                 validators = progress.get("validators", {})
                                 node_progress = validators.get(hotkey, {})
                                 node_progress.update(
@@ -286,7 +306,9 @@ async def _sync_coupons_for_validators(
                                 )
                                 validators[hotkey] = node_progress
                                 progress["validators"] = validators
-                                dynamic_config_service.set_sync_progress(progress)
+                                dynamic_config_service.set_sync_progress(
+                                    progress
+                                )
                             except Exception as e2:
                                 logger.error(
                                     f"Failed to update sync progress to error for {hotkey}: {e2}"
@@ -308,15 +330,23 @@ async def _sync_coupons_for_validators(
 
                 if is_first_sync and responded_for_node:
                     try:
-                        progress = dynamic_config_service.get_sync_progress() or {}
+                        progress = (
+                            dynamic_config_service.get_sync_progress() or {}
+                        )
                         validators = progress.get("validators", {})
                         node_progress = validators.get(hotkey, {})
                         node_progress.update(
                             {
-                                "status": "done" if node_had_coupons else "done",
+                                "status": (
+                                    "done" if node_had_coupons else "done"
+                                ),
                                 "coupons_fetched": node_coupons_fetched,
                                 "synced": node_coupons_synced,
-                                "last_synced": last_synced.isoformat() if last_synced else None,
+                                "last_synced": (
+                                    last_synced.isoformat()
+                                    if last_synced
+                                    else None
+                                ),
                             }
                         )
                         validators[hotkey] = node_progress
@@ -353,14 +383,18 @@ async def _sync_coupons_for_validators(
         for node in validator_nodes:
             await fetch_and_store(node)
     else:
-        await asyncio.gather(*(fetch_and_store(node) for node in validator_nodes))
+        await asyncio.gather(
+            *(fetch_and_store(node) for node in validator_nodes)
+        )
 
     # Finalize status and clear sync progress
     try:
         status = "ok"
         if errors_total > 0:
             status = "error"
-        elif processed_total_synced == 0 and validators_with_coupons_total == 0:
+        elif (
+            processed_total_synced == 0 and validators_with_coupons_total == 0
+        ):
             status = "empty"
 
         result_payload = {

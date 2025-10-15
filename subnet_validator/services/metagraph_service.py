@@ -14,7 +14,10 @@ class MetagraphService:
         self.db = db
 
     def create_or_update_node(
-        self, node: Node, validator_version: str | None = None, is_enough_weight: bool | None = None
+        self,
+        node: Node,
+        validator_version: str | None = None,
+        is_enough_weight: bool | None = None,
     ) -> bool:
         """
         Creates or updates a MetagraphNode record from a fiber Node.
@@ -87,7 +90,6 @@ class MetagraphService:
             query = query.filter(MetagraphNode.coldkey == coldkey)
 
         return query.first() is not None
-
 
     def get_node_by_hotkey(self, hotkey: str) -> Optional[Node]:
         node = (

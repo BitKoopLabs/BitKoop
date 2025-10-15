@@ -34,17 +34,17 @@ class WeightCalculatorService:
     ):
         self.db = db
         self.get_settings = get_settings
-    
+
     @property
     def coupon_weight(self) -> float:
         """Get coupon weight from settings dynamically."""
         return self.get_settings().coupon_weight
-    
+
     @property
     def container_weight(self) -> float:
         """Get container weight from settings dynamically."""
         return self.get_settings().container_weight
-    
+
     @property
     def delta_points(self) -> timedelta:
         """Get delta points from settings dynamically."""

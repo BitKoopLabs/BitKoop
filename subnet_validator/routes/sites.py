@@ -24,17 +24,23 @@ async def get_sites(
         Depends(get_site_service),
     ],
     page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=100, description="Number of sites per page"),
+    page_size: int = Query(
+        20, ge=1, le=100, description="Number of sites per page"
+    ),
 ):
     """
     Get paginated list of all sites with slot information.
     """
     try:
-        sites_data = site_service.get_sites_paginated(page=page, page_size=page_size)
+        sites_data = site_service.get_sites_paginated(
+            page=page, page_size=page_size
+        )
         return sites_data
     except Exception as e:
         logger.error(f"Failed to get sites: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get sites: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get sites: {e}"
+        )
 
 
 @router.get("/{site_id}")
@@ -43,7 +49,7 @@ async def get_site_info(
     site_service: Annotated[
         SiteService,
         Depends(get_site_service),
-    ]
+    ],
 ):
     """
     Get site information including available slots for coupon submission.
@@ -51,8 +57,10 @@ async def get_site_info(
     try:
         site = site_service.get_site_with_slots(site_id)
         if not site:
-            raise HTTPException(status_code=404, detail=f"Site with id {site_id} not found")
-        
+            raise HTTPException(
+                status_code=404, detail=f"Site with id {site_id} not found"
+            )
+
         return {
             "id": site.id,
             "base_url": site.base_url,
@@ -67,4 +75,6 @@ async def get_site_info(
         raise
     except Exception as e:
         logger.error(f"Failed to get site info for site {site_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get site info: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get site info: {e}"
+        )

@@ -7,7 +7,7 @@ from fiber import (
 class CouponStatus(enum.IntEnum):
     INVALID = 0
     VALID = 1
-    PENDING = 2 
+    PENDING = 2
     EXPIRED = 3
     USED = 4
     DELETED = 5

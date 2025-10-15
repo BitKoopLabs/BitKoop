@@ -25,8 +25,7 @@ class ExtendedNode(BaseNode):
         try:
             n = int(v)
             import struct, socket
+
             return socket.inet_ntoa(struct.pack(">I", n))
         except Exception:
             return v
-
-

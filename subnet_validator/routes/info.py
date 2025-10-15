@@ -22,7 +22,7 @@ async def get_sync_info(
     dynamic_config_service: Annotated[
         DynamicConfigService,
         Depends(get_dynamic_config_service),
-    ]
+    ],
 ):
     try:
         progress = dynamic_config_service.get_sync_progress()
@@ -33,6 +33,6 @@ async def get_sync_info(
         }
     except Exception as e:
         logger.error(f"Failed to read sync info: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to read sync info: {e}")
-
-
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read sync info: {e}"
+        )

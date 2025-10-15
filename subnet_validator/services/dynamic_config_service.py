@@ -11,7 +11,7 @@ class DynamicConfigService:
     def get_sync_progress(self) -> dict[str, Any]:
         value = self._get("sync_progress", "{}")
         return json.loads(value)
-    
+
     def set_sync_progress(self, progress: dict[str, Any] = dict()):
         self._set("sync_progress", json.dumps(progress))
 
