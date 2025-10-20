@@ -101,12 +101,6 @@ If you still want to run locally:
    uvicorn subnet_validator.main:app --host 0.0.0.0 --port ${PORT:-8000}
    ```
 
-4. (Optional) Start background tasks in a separate process or terminal:
-
-   ```sh
-   python -m subnet_validator.tasks.run_tasks
-   ```
-
 ---
 
 ## ⚙️ Wallet Customization
@@ -169,6 +163,40 @@ Validators use first‑party coupon APIs instead of any browser automation.
   - If no API is configured or the API is unavailable, the validator may skip verification for that site until an API is provided.
 
 ---
+
+## 🔒 TLS Notary coupon validation (new)
+
+TLS Notary (TLSN) provides cryptographic proofs of HTTP exchanges without running a browser.
+
+**Purpose**: Confirm coupon claims using cryptographic proofs of real HTTP exchanges, without a browser.
+
+**Actors**:
+- Miner who submitted the coupon (provides the proof)
+- Validator (requests and checks the proof)
+- Local verifier (judges proof validity)
+
+**Flow**:
+1. The validator asks the coupon's miner to produce a proof.
+2. The miner acknowledges the request and begins generating the proof.
+3. The validator briefly checks whether a result is available now; if it is, the validator verifies it locally and decides the coupon's status.
+4. If no result is ready, the coupon remains unchanged for a later cycle.
+
+**Decision**:
+- Valid proof → mark coupon valid.
+- Invalid proof → mark coupon invalid.
+- No proof by the deadline (a short grace window since last check or creation) → consider the claim abandoned, release ownership so others can submit.
+
+**Stored insight**:
+- When a proof is verified, the validator preserves key context (who the server was, when it happened, what was exchanged) alongside the coupon for auditability.
+
+**Principles**:
+- Lightweight (no browser automation).
+- Miner-responsibility (the submitter must substantiate the claim).
+- Fairness over time (stale, unproven claims don't block others).
+
+For detailed architecture information, see: [BitKoop Miner Architecture](https://github.com/BitKoopLabs/BitKoop-Miner/blob/main/docs/architecture.md)
+
+Local verifier source: [tlsn-http-verifier](https://github.com/BitKoopLabs/tlsn-http-verifier)
 
 ## Configuration
 

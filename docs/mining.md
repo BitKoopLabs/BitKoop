@@ -29,10 +29,17 @@ btcli subnet register --netuid 16
 - Monitor performance
   - Track your rank and scores over time; recent, working codes improve your normalized weight
 
-### Interface: BitKoop Miner CLI
+### Interface: BitKoop Miner Server
+
+- Repository: [BitKoop-Miner](https://github.com/BitKoopLabs/BitKoop-Miner)
+- Deploy the miner server on a VPS for continuous operation
+- The server handles coupon submission, validation, and TLSN proof generation
+- Configure with your Bittensor wallet for authenticated operations
+
+### CLI Interface: BitKoop Miner CLI
 
 - Repository: [BitKoop-CLI](https://github.com/BitKoop-com/BitKoop-CLI)
-- Install and follow its usage guide for commands to submit, recheck, delete codes, list sites/categories, and check ranks
+- Install and follow its usage guide for commands to submit, recheck, delete codes, list sites, and check ranks
 - The CLI uses your Bittensor wallet configuration for authenticated operations
 
 
