@@ -63,7 +63,7 @@ async def test_tlsn_validator_live_miner_flow():
             return None
 
     # Minimal site and coupon objects (duck-typed)
-    site = SimpleNamespace(id=123)
+    site = SimpleNamespace(id=21)
     coupon = SimpleNamespace(
         code=os.getenv("TLSN_TEST_COUPON_CODE", "TLSNTest"),
         site_id=site.id,

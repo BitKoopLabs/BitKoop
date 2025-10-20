@@ -179,7 +179,7 @@ def get_coupon_validator(
         if (
             site.config
             and isinstance(site.config, dict)
-            and site.config.get("validation") == "tlsn"
+            and site.config.get("type") == "playwright"
         ):
             # Pass settings, metagraph and coupon_service for miner flow and ownership handling
             return TlsnCouponValidator(
