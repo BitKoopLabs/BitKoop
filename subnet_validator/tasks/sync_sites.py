@@ -29,12 +29,18 @@ async def sync_sites(
     db = next(db_gen)
     try:
         service = SiteService(db)
-        async with SupervisorApiClient(settings.supervisor_api_url) as api_client:
+        async with SupervisorApiClient(
+            settings.supervisor_api_url
+        ) as api_client:
             while True:
                 try:
-                    sites = await api_client.get_sites(page=page, page_size=page_size)
+                    sites = await api_client.get_sites(
+                        page=page, page_size=page_size
+                    )
                 except Exception as e:
-                    logger.error(f"Failed to fetch sites from supervisor API (page {page}): {e}")
+                    logger.error(
+                        f"Failed to fetch sites from supervisor API (page {page}): {e}"
+                    )
                     break
 
                 if not sites:
@@ -53,7 +59,9 @@ async def sync_sites(
                         )
                         processed += 1
                     except Exception as e:
-                        logger.error(f"Failed to add/update site {site.store_id}: {e}")
+                        logger.error(
+                            f"Failed to add/update site {site.store_id}: {e}"
+                        )
                 db.commit()
 
                 if len(sites) < page_size:

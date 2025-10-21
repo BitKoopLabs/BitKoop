@@ -134,14 +134,20 @@ def get_coupons(
             now_ms = int(datetime.now(UTC).timestamp() * 1000)
             # settings.submit_window is a timedelta; treat it as max age for nonce
             # We cannot inject settings here easily; infer window = 2 minutes default via service submit_window
-            window_ms = int(coupon_service.submit_window.total_seconds() * 1000)
+            window_ms = int(
+                coupon_service.submit_window.total_seconds() * 1000
+            )
             if now_ms - nonce_ms > window_ms:
                 raise HTTPException(status_code=401, detail="Nonce expired")
 
-            validator_nodes = coupon_service.metagraph_service.get_validator_nodes()
+            validator_nodes = (
+                coupon_service.metagraph_service.get_validator_nodes()
+            )
             validator_hotkeys = {node.hotkey for node in validator_nodes}
             if hotkey not in validator_hotkeys:
-                raise HTTPException(status_code=401, detail="Hotkey not in validator nodes")
+                raise HTTPException(
+                    status_code=401, detail="Hotkey not in validator nodes"
+                )
 
             # Sign only hotkey and nonce
             payload = {
@@ -150,14 +156,21 @@ def get_coupons(
             }
             # Verify
             import json
-            message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+            message = json.dumps(
+                payload, sort_keys=True, separators=(",", ":")
+            )
             if not verify_signature(hotkey, message, bytes.fromhex(sig_hex)):
-                raise HTTPException(status_code=401, detail="Invalid signature")
+                raise HTTPException(
+                    status_code=401, detail="Invalid signature"
+                )
             bypass_submit_window = True
         except HTTPException:
             raise
         except Exception:
-            raise HTTPException(status_code=401, detail="Invalid Authorization header")
+            raise HTTPException(
+                status_code=401, detail="Invalid Authorization header"
+            )
 
     return coupon_service.get_coupons(
         miner_hotkey=miner_hotkey,
@@ -178,7 +191,7 @@ async def get_sync_status(
     dynamic_config_service: Annotated[
         DynamicConfigService,
         Depends(get_dynamic_config_service),
-    ]
+    ],
 ):
     try:
         progress = dynamic_config_service.get_sync_progress()

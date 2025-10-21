@@ -12,17 +12,24 @@ from typing import List, Tuple, Callable, Optional
 from subnet_validator.constants import CouponStatus
 from fiber.logging_utils import get_logger
 from subnet_validator.database.entities import Coupon, Site
+from subnet_validator.services.validator.base import BaseCouponValidator
 
 
 logger = get_logger(__name__)
 
 
-class PlaywrightCouponValidator:
+class PlaywrightCouponValidator(BaseCouponValidator):
     def __init__(self, site: Site, path: Path):
         self.site = site
         self.node_script_path = path
-        
-    async def _stream_subprocess_output(self, stream: asyncio.StreamReader, level: int, prefix: str, on_line: Optional[Callable[[str], None]] = None) -> None:
+
+    async def _stream_subprocess_output(
+        self,
+        stream: asyncio.StreamReader,
+        level: int,
+        prefix: str,
+        on_line: Optional[Callable[[str], None]] = None,
+    ) -> None:
         """Stream subprocess output line-by-line to logger, calling on_line for each decoded line if provided."""
         try:
             while True:
@@ -42,7 +49,9 @@ class PlaywrightCouponValidator:
         except Exception as e:
             logger.warning("Error while streaming subprocess output: %s", e)
 
-    async def _run_node_validation(self, coupon: Coupon, site_config: dict) -> Optional[bool]:
+    async def _run_node_validation(
+        self, coupon: Coupon, site_config: dict
+    ) -> Optional[bool]:
         """Run the Node.js validation script as a subprocess.
         Returns True for valid, False for invalid, None for unknown (e.g., timeout/error).
         """
@@ -51,7 +60,9 @@ class PlaywrightCouponValidator:
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Prepare the command
                 # Use ASCII-escaped JSON to avoid CLI parsing issues on Node side (emojis, special chars)
-                config_arg = json.dumps(site_config, ensure_ascii=True, separators=(",", ":"))
+                config_arg = json.dumps(
+                    site_config, ensure_ascii=True, separators=(",", ":")
+                )
                 cmd = [
                     "node",
                     str(self.node_script_path),
@@ -60,7 +71,9 @@ class PlaywrightCouponValidator:
                     f"--config={config_arg}",
                 ]
                 if coupon.used_on_product_url:
-                    cmd.append(f"--used_on_product_url={coupon.used_on_product_url}")
+                    cmd.append(
+                        f"--used_on_product_url={coupon.used_on_product_url}"
+                    )
                 logger.info(
                     "Starting Node.js validation subprocess | coupon=%s site=%s cwd=%s cmd=%s",
                     coupon.code,
@@ -74,7 +87,7 @@ class PlaywrightCouponValidator:
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
-                    cwd=temp_dir
+                    cwd=temp_dir,
                 )
                 # Stream stdout/stderr in real time
                 success_seen = False
@@ -87,20 +100,36 @@ class PlaywrightCouponValidator:
                         success_seen = True
 
                 stdout_task = asyncio.create_task(
-                    self._stream_subprocess_output(process.stdout, logging.INFO, "node(stdout): ", on_line=check_success)
+                    self._stream_subprocess_output(
+                        process.stdout,
+                        logging.INFO,
+                        "node(stdout): ",
+                        on_line=check_success,
+                    )
                 )
+
                 def check_stderr(line: str) -> None:
                     nonlocal parse_error_seen, stderr_lines
                     stderr_lines += 1
-                    if "Invalid JSON in --config" in line or "SyntaxError" in line:
+                    if (
+                        "Invalid JSON in --config" in line
+                        or "SyntaxError" in line
+                    ):
                         parse_error_seen = True
 
                 stderr_task = asyncio.create_task(
-                    self._stream_subprocess_output(process.stderr, logging.ERROR, "node(stderr): ", on_line=check_stderr)
+                    self._stream_subprocess_output(
+                        process.stderr,
+                        logging.ERROR,
+                        "node(stderr): ",
+                        on_line=check_stderr,
+                    )
                 )
 
                 try:
-                    await asyncio.wait_for(process.wait(), timeout=300)  # 5 minute timeout
+                    await asyncio.wait_for(
+                        process.wait(), timeout=300
+                    )  # 5 minute timeout
                 except asyncio.TimeoutError:
                     logger.error(
                         "Node validation timed out after 300s | coupon=%s site=%s. Terminating...",
@@ -110,11 +139,15 @@ class PlaywrightCouponValidator:
                     with contextlib.suppress(ProcessLookupError):
                         process.kill()
                     # Ensure we consume remaining output
-                    await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
+                    await asyncio.gather(
+                        stdout_task, stderr_task, return_exceptions=True
+                    )
                     return None
 
                 # Ensure all output was drained
-                await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
+                await asyncio.gather(
+                    stdout_task, stderr_task, return_exceptions=True
+                )
 
                 logger.info(
                     "Node validation finished | coupon=%s site=%s return_code=%s",
@@ -130,17 +163,17 @@ class PlaywrightCouponValidator:
                         process.returncode,
                     )
                     return None
-                
+
                 # Check if result.json was created and parse it
                 result_file = Path(temp_dir) / "output" / "result.json"
                 if result_file.exists():
-                    with open(result_file, 'r') as f:
+                    with open(result_file, "r") as f:
                         result = json.load(f)
                         value = result.get("couponIsValid", None)
                         if isinstance(value, bool):
                             return value
                         return None
-                
+
                 # Fallback: check stdout for success indicators
                 logger.debug(
                     "Result file not found | coupon=%s site=%s success_seen=%s stderr_lines=%s parse_error_seen=%s",
@@ -151,7 +184,7 @@ class PlaywrightCouponValidator:
                     parse_error_seen,
                 )
                 return True if success_seen else None
-                
+
         except Exception as e:
             logger.exception(
                 "Error running Node.js validation | coupon=%s site=%s error=%s",
@@ -161,14 +194,16 @@ class PlaywrightCouponValidator:
             )
             return None
 
-    async def validate(self, coupons: List[Coupon]) -> List[Tuple[Coupon, bool]]:
+    async def validate(
+        self, coupons: List[Coupon]
+    ) -> List[Tuple[Coupon, bool]]:
         """Validate coupons using the Node.js Playwright script"""
         results = []
-        
+
         for coupon in coupons:
             try:
                 # Create site configuration
-                
+
                 # Run validation
                 config = self.site.config.copy()
                 if coupon.used_on_product_url:
@@ -182,14 +217,15 @@ class PlaywrightCouponValidator:
                     coupon.status = CouponStatus.INVALID
                 # If result is None, keep existing status unchanged
                 coupon.last_checked_at = datetime.now(UTC)
-                
+
                 results.append((coupon, result is True))
-                
+
             except Exception as e:
-                logger.exception("Error validating coupon %s: %s", coupon.code, e)
+                logger.exception(
+                    "Error validating coupon %s: %s", coupon.code, e
+                )
                 # On unexpected errors, keep status as-is
                 coupon.last_checked_at = datetime.now(UTC)
                 results.append((coupon, False))
-        
-        return results
 
+        return results

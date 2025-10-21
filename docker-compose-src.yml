@@ -13,6 +13,7 @@ services:
       - ENV=${ENV:-test}
       - RECHECK_INTERVAL=${RECHECK_INTERVAL:-P1DT0H0M0S}
       - RESUBMIT_INTERVAL=${RESUBMIT_INTERVAL:-P1DT0H0M0S}
+      - TLSN_VERIFIER_URL=${TLSN_VERIFIER_URL:-http://tlsn-http-verifier:8080/verify}
     volumes:
       - ~/.bittensor:/root/.bittensor
       - ./data:/app/data
@@ -20,25 +21,15 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     restart: unless-stopped
     entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
-  tasks:
-    build: .
-    restart: unless-stopped
+
+  tlsn-http-verifier:
+    image: ghcr.io/bitkooplabs/bitkoop-tlsn-http-verifier:latest
     environment:
-      - DATABASE_URL=sqlite:///data/bitkoop.db
-      - ENV=${ENV:-production}
-      - SUBTENSOR_NETWORK=${SUBTENSOR_NETWORK:-finney}
-      - MIN_WEIGHT_STAKE=${MIN_WEIGHT_STAKE:-1000.0}
-      - VALIDATE_OUTDATED_COUPON_INTERVAL=${VALIDATE_OUTDATED_COUPON_INTERVAL:-P1DT0H0M0S}
-      - RESPECT_PEER_SYNC=${RESPECT_PEER_SYNC:-true}
-      - PROXY_SERVER=${PROXY_SERVER:-}
-      - PROXY_USERNAME=${PROXY_USERNAME:-}
-      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
-    volumes:
-      - ~/.bittensor:/root/.bittensor
-      - ./data:/app/data
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-    entrypoint: ["python", "-m", "subnet_validator.tasks.run_tasks"]
+      - ADDR=0.0.0.0:8080
+      - PRODUCTION=1
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
 
   watchtower:
     image: containrrr/watchtower

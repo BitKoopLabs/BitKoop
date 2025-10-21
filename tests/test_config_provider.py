@@ -9,13 +9,6 @@ from unittest.mock import (
     patch,
     AsyncMock,
 )
-from coupon_validation.models import (
-    Config,
-    SiteConfig,
-)
-from subnet_validator.services.config_provider import (
-    ConfigProvider,
-)
 
 
 @pytest.fixture

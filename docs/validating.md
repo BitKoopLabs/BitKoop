@@ -64,9 +64,8 @@ Note: For subnet registration and system overview, see the main README.
 ## 🖥️ Hardware Requirements
 
 - **Minimum**: 2 vCPU, 2–4 GB RAM
-- **Recommended**: 8+ vCPU, 8–16 GB RAM
 
-These values account for asyncio.gather-based concurrency, the Fiber framework overhead, and periodic headless Firefox sessions. For future multi-browser validation, plan for 8+ vCPU and 8–16 GB RAM.
+These values account for asyncio-based concurrency and the Fiber framework overhead. No browser automation is used.
 
 ---
 
@@ -100,12 +99,6 @@ If you still want to run locally:
    ```sh
    alembic upgrade head
    uvicorn subnet_validator.main:app --host 0.0.0.0 --port ${PORT:-8000}
-   ```
-
-4. (Optional) Start background tasks in a separate process or terminal:
-
-   ```sh
-   python -m subnet_validator.tasks.run_tasks
    ```
 
 ---
@@ -152,42 +145,58 @@ Replace `my_wallet` and `my_hotkey` with your actual wallet name and hotkey.
 
 ---
 
-## Proxy Setup for Validator
+## 🛍️ Shopify Stores API validation (new)
 
-⚠️ Important
+Validators use first‑party coupon APIs instead of any browser automation.
 
-1. First, purchase a proxy package.
-   - Please watch the attached video tutorial.
-   - Make sure to select the exact parameters shown in the video.
+- Detection
+  - If a site provides an `api_url` like `https://store.myshopify.com/apps/coupon-check?code={CODE}`, the validator prefers this API.
+  
+- Flow
+  - The validator calls the API with your code (`{CODE}` replaced).
+  - No browser automation is used.
 
-   ![Proxy tutorial](./assets/proxy.gif)
+- Decision rules
+  - A coupon is treated as valid only if the API reports it as applicable (e.g., `ok=true` and `applicable=true`).
 
-   [Watch in MP4](./assets/proxy.mp4)
-
-2. Once the proxy is purchased, continue with the step-by-step setup instructions for the validator provided in this guide.
-
-Your validator can work without a proxy, but it is strongly recommended to use one. Without a proxy, the websites your validator processes will often block requests due to repeated traffic from the same IP address. This can significantly reduce your validator’s efficiency and performance.
-
-To prevent blocking, you should use residential proxies, preferably dynamic (rotating) ones. With dynamic proxies, the IP address changes on every request, which makes your validator appear as a normal user rather than automated traffic.
-
-A trusted service for residential proxies is [Proxy-Seller.com](https://proxy-seller.com/). After purchasing, you will receive the following credentials:
-
-- `PROXY_SERVER` – the proxy host and port (e.g., us-residential.proxy-seller.com:12345)
-- `PROXY_USERNAME` – your proxy login username
-- `PROXY_PASSWORD` – your proxy login password
-
-You will need to add these values to your validator’s configuration. The recommended way is to set them in your `.env` file (see [`env.example`](../env.example)) so `docker-compose.yml` picks them up automatically:
-
-```env
-# .env
-PROXY_SERVER=us-residential.proxy-seller.com:12345
-PROXY_USERNAME=your_username
-PROXY_PASSWORD=your_password
-```
-
-Once configured, your validator will route all traffic through the proxy, reducing the risk of blocks and ensuring smooth, uninterrupted operation.
+- Fallback
+  - If no API is configured or the API is unavailable, the validator may skip verification for that site until an API is provided.
 
 ---
+
+## 🔒 TLS Notary coupon validation (new)
+
+TLS Notary (TLSN) provides cryptographic proofs of HTTP exchanges without running a browser.
+
+**Purpose**: Confirm coupon claims using cryptographic proofs of real HTTP exchanges, without a browser.
+
+**Actors**:
+- Miner who submitted the coupon (provides the proof)
+- Validator (requests and checks the proof)
+- Local verifier (judges proof validity)
+
+**Flow**:
+1. The validator asks the coupon's miner to produce a proof.
+2. The miner acknowledges the request and begins generating the proof.
+3. The validator briefly checks whether a result is available now; if it is, the validator verifies it locally and decides the coupon's status.
+4. If no result is ready, the coupon remains unchanged for a later cycle.
+
+**Decision**:
+- Valid proof → mark coupon valid.
+- Invalid proof → mark coupon invalid.
+- No proof by the deadline (a short grace window since last check or creation) → consider the claim abandoned, release ownership so others can submit.
+
+**Stored insight**:
+- When a proof is verified, the validator preserves key context (who the server was, when it happened, what was exchanged) alongside the coupon for auditability.
+
+**Principles**:
+- Lightweight (no browser automation).
+- Miner-responsibility (the submitter must substantiate the claim).
+- Fairness over time (stale, unproven claims don't block others).
+
+For detailed architecture information, see: [BitKoop Miner Architecture](https://github.com/BitKoopLabs/BitKoop-Miner/blob/main/docs/architecture.md)
+
+Local verifier source: [tlsn-http-verifier](https://github.com/BitKoopLabs/tlsn-http-verifier)
 
 ## Configuration
 
@@ -196,7 +205,6 @@ Most settings can be changed via environment variables used by `docker-compose.y
 - `PORT`: API port (default `8000`)
 - `WALLET_NAME`, `WALLET_HOTKEY`, `WALLET_PATH`: Your Bittensor wallet info
 - `SUBTENSOR_NETWORK`: Bittensor network (e.g., `finney`)
-- `PROXY_SERVER`, `PROXY_USERNAME`, `PROXY_PASSWORD`: Optional proxy for validation tasks
 
 ---
 

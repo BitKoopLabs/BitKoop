@@ -17,7 +17,9 @@ from subnet_validator.dependencies import (
     get_metagraph_service,
     get_settings,
 )
-from subnet_validator.services.dynamic_config_service import DynamicConfigService
+from subnet_validator.services.dynamic_config_service import (
+    DynamicConfigService,
+)
 from subnet_validator.services.metagraph_service import MetagraphService
 from subnet_validator.services.weight_calculator_service import (
     WeightCalculatorService,
@@ -38,19 +40,31 @@ logger = get_logger(__name__)
 
 
 async def set_weights(
-    settings: Settings,
-    substrate: SubstrateInterface,
     db: Session,
     weight_calculator: WeightCalculatorService,
-    metagraph_service: MetagraphService,
     dynamic_config_service: DynamicConfigService,
+    context=None,
+    **kwargs,
 ):
     """
     Main function to calculate and set weights for all miners.
     """
+    # Use context.get_settings() if available, otherwise fallback to direct call
+    if context:
+        settings = context.get_settings()
+    else:
+        from . import dependencies
+
+        settings = dependencies.get_settings()
+
     last_set_weights_time = dynamic_config_service.get_last_set_weights_time()
-    if last_set_weights_time > time.time() - settings.set_weights_interval.total_seconds():
-        logger.debug("Skipping weight calculation because it was already run recently")
+    if (
+        last_set_weights_time
+        > time.time() - settings.set_weights_interval.total_seconds()
+    ):
+        logger.debug(
+            "Skipping weight calculation because it was already run recently"
+        )
         return
 
     logger.info("Starting weight calculation...")
@@ -65,16 +79,43 @@ async def set_weights(
         #     logger.warning("All ratings are 0, skipping weight set")
         #     return
 
-        miner_nodes = metagraph_service.get_miner_nodes()
-
         keypair = chain_utils.load_hotkey_keypair(
             wallet_name=settings.wallet_name, hotkey_name=settings.hotkey_name
         )
 
-        validator_node = metagraph_service.get_node_by_hotkey(
-            keypair.ss58_address
-        )
+        # Get metagraph from context or factory config
+        if context:
+            metagraph = context.metagraph
+        else:
+            # Fallback to factory config
+            from . import dependencies
+
+            factory_config = dependencies.get_factory_config()
+            metagraph = factory_config.metagraph
+
+        # Check if metagraph is synced and has nodes
+        if not metagraph.is_in_sync:
+            logger.warning(
+                "Metagraph is not synced, skipping weight calculation"
+            )
+            return
+
+        # Get nodes from metagraph
+        miner_nodes = metagraph.get_miner_nodes()
+        validator_node = metagraph.get_node_by_hotkey(keypair.ss58_address)
+
+        # Validate we have nodes
+        if not miner_nodes:
+            logger.warning("No miner nodes found in metagraph")
+            return
+
         if not validator_node:
+            logger.error(
+                f"Validator node not found for hotkey {keypair.ss58_address}"
+            )
+            logger.info(
+                f"Available nodes: {[node.hotkey for node in metagraph.nodes]}"
+            )
             raise ValueError(
                 f"Validator node not found for hotkey {keypair.ss58_address}"
             )
@@ -87,12 +128,17 @@ async def set_weights(
             if hotkey in hotkey_to_node_id
         }
 
-        node_id_to_weight = {
-            207: 1.0,
-        }
+        if not node_id_to_weight:
+            logger.warning(
+                "No node weights to set, fallback to hardcoded weights to subnet owner"
+            )
+
+            node_id_to_weight = {
+                207: 1.0,
+            }
 
         result = weights.set_node_weights(
-            substrate=substrate,
+            substrate=metagraph.substrate,
             keypair=keypair,
             node_ids=list(node_id_to_weight.keys()),
             node_weights=list(node_id_to_weight.values()),
@@ -105,7 +151,7 @@ async def set_weights(
 
         if not result:
             raise Exception("Failed to set weights")
-        
+
         dynamic_config_service.set_last_set_weights_time(time.time())
 
         logger.info("Weight calculation completed successfully")
@@ -135,7 +181,12 @@ async def periodic_set_weights(
         logger.info("Starting set_weights cycle.")
         try:
             await set_weights(
-                settings, substrate, db, weight_calculator, metagraph_service, dynamic_config_service
+                settings,
+                substrate,
+                db,
+                weight_calculator,
+                metagraph_service,
+                dynamic_config_service,
             )
         except Exception as e:
             logger.error(f"Error in set_weights cycle: {e}", exc_info=True)

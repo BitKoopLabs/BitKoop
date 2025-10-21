@@ -170,7 +170,7 @@ class Coupon(Base):
     )
     last_action_date: Mapped[int] = mapped_column(
         Integer,
-        nullable=False, 
+        nullable=False,
     )
     last_action_signature: Mapped[str] = mapped_column(
         String,
@@ -347,4 +347,47 @@ class CouponActionLog(Base):
             ["code", "site_id", "miner_hotkey"],
             ["coupons.code", "coupons.site_id", "coupons.miner_hotkey"],
         ),
+    )
+
+
+class CouponOwnership(Base):
+    __tablename__ = "coupon_ownerships"
+
+    # One ownership record per unique (site, code)
+    code: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        nullable=False,
+    )
+    site_id: Mapped[int] = mapped_column(
+        ForeignKey("sites.id"),
+        primary_key=True,
+        nullable=False,
+    )
+
+    # The hotkey that currently owns this coupon code on the site
+    # Can be None when ownership is cleared (for debugging/audit purposes)
+    owner_hotkey: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+
+    acquired_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    last_contested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    contest_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
