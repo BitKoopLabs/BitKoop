@@ -117,6 +117,13 @@ class TlsnCouponValidator(BaseCouponValidator):
                 job_json = job_resp.json()
                 result = job_json.get("result")
                 error = job_json.get("error")
+                status = job_json.get("status")
+                
+                # Check for job status 4 (failure) - raise exception to indicate invalid
+                if status == 4:
+                    logger.info("Miner job failed with status 4 | job_id=%s", job_id)
+                    raise ValueError("Miner job failed with status 4")
+                
                 if error:
                     logger.warning(
                         "Miner job error | job_id=%s error=%s", job_id, error
@@ -174,8 +181,40 @@ class TlsnCouponValidator(BaseCouponValidator):
             )
             return None
 
+    def _validate_proof_metadata(self, meta: dict, coupon: Coupon) -> bool:
+        """Validate that the proof metadata matches the site's configuration requirements."""
+        try:
+            if not isinstance(meta, dict) or not isinstance(self.site.config, dict):
+                return True  # Skip validation if no config available
+            
+            site_config = self.site.config
+            data = meta.get("data", {})
+            sent = data.get("sent", "")
+            received = data.get("received", "")
+            
+            # Check requestParams if configured
+            request_params = site_config.get("requestParams")
+            if request_params and isinstance(request_params, dict):
+                expected_method = request_params.get("method", "POST")
+                expected_url = request_params.get("applyCouponUrl")
+                
+                if expected_url and expected_method:
+                    # Check if the sent request matches expected method and URL
+                    if not (sent.startswith(expected_method) and expected_url in sent):
+                        logger.warning(
+                            "Proof metadata doesn't match expected request | sent=%s expected=%s %s",
+                            sent, expected_method, expected_url
+                        )
+                        return False
+            
+            
+            return True
+        except Exception as e:
+            logger.warning("Error validating proof metadata | err=%s", e)
+            return True  # Allow validation to pass on error
+
     async def _verify_proof(
-        self, presentation_hex: str
+        self, presentation_hex: str, coupon: Coupon
     ) -> tuple[Optional[bool], Optional[dict]]:
         try:
             client = await self._get_or_create_client()
@@ -216,6 +255,13 @@ class TlsnCouponValidator(BaseCouponValidator):
                     rec_obj["sent"] = sent
                 if rec_obj:
                     meta["data"] = rec_obj
+            
+            # Validate metadata against site configuration
+            if valid and meta:
+                if not self._validate_proof_metadata(meta, coupon):
+                    valid = False
+                    logger.info("Proof metadata validation failed, marking as invalid")
+            
             return (
                 valid if isinstance(valid, bool) else None,
                 meta if meta else None,
@@ -236,7 +282,7 @@ class TlsnCouponValidator(BaseCouponValidator):
                     result = None
                     if proof_hex:
                         # 2) Verify proof locally
-                        result, meta = await self._verify_proof(proof_hex)
+                        result, meta = await self._verify_proof(proof_hex, coupon)
                         # Persist tlsn metadata under rule.tlsn
                         try:
                             if meta:
@@ -288,6 +334,15 @@ class TlsnCouponValidator(BaseCouponValidator):
                             ),
                         )
                     )
+                except ValueError as e:
+                    # Handle miner job failure (status 4) - mark as invalid
+                    if "status 4" in str(e):
+                        logger.info("Miner job failed, marking coupon invalid | code=%s", coupon.code)
+                        coupon.status = CouponStatus.INVALID
+                        coupon.last_checked_at = datetime.now(UTC)
+                        results.append((coupon, False))
+                    else:
+                        raise
                 except Exception as e:
                     logger.exception(
                         "Error validating coupon via TLSN | code=%s err=%s",
