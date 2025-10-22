@@ -116,7 +116,6 @@ async def validate_pending_coupons(
 
 async def validate_outdated_coupon(
     coupon_service: CouponService,
-    offset: timedelta = timedelta(days=1),
     context=None,
     **kwargs,
 ):
@@ -127,6 +126,8 @@ async def validate_outdated_coupon(
         from . import dependencies
 
         settings = dependencies.get_settings()
+
+    offset = settings.recheck_interval
 
     logger.info("Running validate_outdated_coupon task.")
     last_checked_to = datetime.now(UTC) - offset

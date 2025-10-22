@@ -16,6 +16,10 @@ from subnet_validator.services.validator.base import BaseCouponValidator
 logger = get_logger(__name__)
 
 
+class MinerJobFailed(Exception):
+    """Raised when miner reports a failed job that should mark coupon invalid."""
+    pass
+
 class TlsnCouponValidator(BaseCouponValidator):
     def __init__(
         self,
@@ -119,10 +123,10 @@ class TlsnCouponValidator(BaseCouponValidator):
                 error = job_json.get("error")
                 status = job_json.get("status")
                 
-                # Check for job status 4 (failure) - raise exception to indicate invalid
+                # Check for job status 4 (failure) - raise to indicate invalid
                 if status == 4:
                     logger.info("Miner job failed with status 4 | job_id=%s", job_id)
-                    raise ValueError("Miner job failed with status 4")
+                    raise MinerJobFailed("status=4")
                 
                 if error:
                     logger.warning(
@@ -168,6 +172,9 @@ class TlsnCouponValidator(BaseCouponValidator):
                             result,
                         )
                         return None
+            except MinerJobFailed:
+                # propagate to caller for marking coupon invalid
+                raise
             except Exception as e:
                 logger.debug(
                     "Single job fetch failed | job_id=%s err=%s", job_id, e
@@ -334,15 +341,12 @@ class TlsnCouponValidator(BaseCouponValidator):
                             ),
                         )
                     )
-                except ValueError as e:
-                    # Handle miner job failure (status 4) - mark as invalid
-                    if "status 4" in str(e):
-                        logger.info("Miner job failed, marking coupon invalid | code=%s", coupon.code)
-                        coupon.status = CouponStatus.INVALID
-                        coupon.last_checked_at = datetime.now(UTC)
-                        results.append((coupon, False))
-                    else:
-                        raise
+                except MinerJobFailed:
+                    # Handle miner job failure - mark as invalid
+                    logger.info("Miner job failed, marking coupon invalid | code=%s", coupon.code)
+                    coupon.status = CouponStatus.INVALID
+                    coupon.last_checked_at = datetime.now(UTC)
+                    results.append((coupon, False))
                 except Exception as e:
                     logger.exception(
                         "Error validating coupon via TLSN | code=%s err=%s",
