@@ -64,7 +64,7 @@ async def _validate_coupons_by_status(
                     coupon.last_checked_at = datetime.now(UTC)
             continue
         try:
-            validator = dependencies.get_coupon_validator(site, settings)
+            validator = dependencies.get_coupon_validator(site, settings, coupon_service, coupon_service.metagraph)
         except ValueError as e:
             logger.error(
                 f"Error getting coupon validator for site_id={site_id}: {e}"
