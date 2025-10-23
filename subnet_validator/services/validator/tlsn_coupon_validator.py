@@ -60,123 +60,164 @@ class TlsnCouponValidator(BaseCouponValidator):
             finally:
                 self._client = None
 
+    async def _get_miner_node(self, coupon: Coupon):
+        """Get miner node from metagraph."""
+        miner_node = self.metagraph.get_node_by_hotkey(coupon.miner_hotkey)
+        if not miner_node:
+            logger.warning(
+                "Miner not found in metagraph | miner_hotkey=%s",
+                coupon.miner_hotkey,
+            )
+            return None
+        return miner_node
+
+    async def _create_job(self, coupon: Coupon, miner_node) -> Optional[str]:
+        """Create a job with the miner and return job_id."""
+        server_address = f"http://{miner_node.ip}:{miner_node.port}"
+        miner_ss58 = coupon.miner_hotkey
+        
+        payload = {
+            "coupon_code": coupon.code,
+            "site_id": self.site.id,
+            "miner_hotkey": coupon.miner_hotkey,
+        }
+        
+        logger.info(
+            "Requesting TLSN proof from miner | addr=%s site_id=%s code=%s",
+            server_address,
+            coupon.site_id,
+            coupon.code,
+        )
+        
+        httpx_client = await self._get_or_create_client()
+        resp = await validator.make_non_streamed_post(
+            httpx_client=httpx_client,
+            server_address=server_address,
+            keypair=self._keypair,
+            validator_ss58_address=self._keypair.ss58_address,
+            miner_ss58_address=miner_ss58,
+            payload=payload,
+            endpoint="/coupon/check",
+        )
+        resp.raise_for_status()
+        job_data = resp.json()
+        job_id = job_data.get("job_id")
+        
+        if not job_id:
+            logger.warning(
+                "Miner did not return job_id | response=%s", job_data
+            )
+            return None
+            
+        return job_id
+
+    async def _check_job_status(self, job_id: str, coupon: Coupon, miner_node) -> Optional[str]:
+        """Check job status and return proof if available."""
+        server_address = f"http://{miner_node.ip}:{miner_node.port}"
+        miner_ss58 = coupon.miner_hotkey
+        
+        httpx_client = await self._get_or_create_client()
+        job_resp = await validator.make_non_streamed_get(
+            httpx_client=httpx_client,
+            server_address=server_address,
+            validator_ss58_address=self._keypair.ss58_address,
+            miner_ss58_address=miner_ss58,
+            keypair=self._keypair,
+            endpoint=f"/job/{job_id}",
+        )
+        job_resp.raise_for_status()
+        job_json = job_resp.json()
+        
+        result = job_json.get("result")
+        error = job_json.get("error")
+        status = job_json.get("status")
+        
+        # Check for job status 4 (failure) - raise to indicate invalid
+        if status == 4:
+            logger.info("Miner job failed with status 4 | job_id=%s", job_id)
+            raise MinerJobFailed("status=4")
+        
+        if error:
+            logger.warning(
+                "Miner job error | job_id=%s error=%s", job_id, error
+            )
+            return None
+            
+        # Validate job age vs deadline
+        if not self._is_job_within_deadline(job_json, coupon):
+            return None
+            
+        return self._extract_proof_from_result(result)
+
+    def _is_job_within_deadline(self, job_json: dict, coupon: Coupon) -> bool:
+        """Check if job was started within the deadline."""
+        try:
+            last_time = coupon.last_checked_at or coupon.created_at
+            deadline = (
+                last_time.replace(tzinfo=UTC)
+                + self.settings.lose_ownership_delta
+            )
+            js = job_json.get("job_start_time")
+            if isinstance(js, str) and js:
+                iso = js.strip().replace("Z", "+00:00")
+                job_started = datetime.fromisoformat(iso)
+                if job_started.tzinfo is None:
+                    job_started = job_started.replace(tzinfo=UTC)
+                if job_started >= deadline:
+                    logger.info(
+                        "Job start time beyond deadline | job_start=%s deadline=%s",
+                        job_started,
+                        deadline,
+                    )
+                    return False
+            return True
+        except Exception as e:
+            logger.debug(
+                "Failed to compare job_start_time with deadline | err=%s",
+                e,
+            )
+            return True  # Allow to proceed if deadline check fails
+
+    def _extract_proof_from_result(self, result) -> Optional[str]:
+        """Extract proof hex from job result."""
+        if not result:
+            return None
+            
+        if isinstance(result, str):
+            return result
+            
+        if isinstance(result, dict):
+            # Prefer nested {data} for presentation
+            data_hex = result.get("data") or result.get("hex")
+            if isinstance(data_hex, str):
+                return data_hex
+            logger.debug(
+                "Unsupported result format from miner | result=%s",
+                result,
+            )
+            return None
+            
+        return None
+
     async def _request_proof_from_miner(self, coupon: Coupon) -> Optional[str]:
         """Request a TLSN proof from the coupon owner miner and return hex-encoded presentation.
 
         Single attempt: submit job and try one immediate get; no polling/sleep.
         """
         try:
-            miner_node = self.metagraph.get_node_by_hotkey(coupon.miner_hotkey)
+            # Get miner node
+            miner_node = await self._get_miner_node(coupon)
             if not miner_node:
-                logger.warning(
-                    "Miner not found in metagraph | miner_hotkey=%s",
-                    coupon.miner_hotkey,
-                )
                 return None
-            server_address = f"http://{miner_node.ip}:{miner_node.port}"
-            miner_ss58 = coupon.miner_hotkey
-
-            httpx_client = await self._get_or_create_client()
-            # Initiate job
-            payload = {
-                "coupon_code": coupon.code,
-                "site_id": self.site.id,
-                "miner_hotkey": coupon.miner_hotkey,
-            }
-            logger.info(
-                "Requesting TLSN proof from miner | addr=%s site_id=%s code=%s",
-                server_address,
-                coupon.site_id,
-                coupon.code,
-            )
-            resp = await validator.make_non_streamed_post(
-                httpx_client=httpx_client,
-                server_address=server_address,
-                keypair=self._keypair,
-                validator_ss58_address=self._keypair.ss58_address,
-                miner_ss58_address=miner_ss58,
-                payload=payload,
-                endpoint="/coupon/check",
-            )
-            resp.raise_for_status()
-            job_data = resp.json()
-            job_id = job_data.get("job_id")
+                
+            # Create job
+            job_id = await self._create_job(coupon, miner_node)
             if not job_id:
-                logger.warning(
-                    "Miner did not return job_id | response=%s", job_data
-                )
                 return None
-
-            # Single immediate job status fetch
-            try:
-                job_resp = await validator.make_non_streamed_get(
-                    httpx_client=httpx_client,
-                    server_address=server_address,
-                    validator_ss58_address=self._keypair.ss58_address,
-                    miner_ss58_address=miner_ss58,
-                    keypair=self._keypair,
-                    endpoint=f"/job/{job_id}",
-                )
-                job_resp.raise_for_status()
-                job_json = job_resp.json()
-                result = job_json.get("result")
-                error = job_json.get("error")
-                status = job_json.get("status")
                 
-                # Check for job status 4 (failure) - raise to indicate invalid
-                if status == 4:
-                    logger.info("Miner job failed with status 4 | job_id=%s", job_id)
-                    raise MinerJobFailed("status=4")
-                
-                if error:
-                    logger.warning(
-                        "Miner job error | job_id=%s error=%s", job_id, error
-                    )
-                    return None
-                # Validate job age vs deadline
-                try:
-                    last_time = coupon.last_checked_at or coupon.created_at
-                    deadline = (
-                        last_time.replace(tzinfo=UTC)
-                        + self.settings.lose_ownership_delta
-                    )
-                    js = job_json.get("job_start_time")
-                    if isinstance(js, str) and js:
-                        iso = js.strip().replace("Z", "+00:00")
-                        job_started = datetime.fromisoformat(iso)
-                        if job_started.tzinfo is None:
-                            job_started = job_started.replace(tzinfo=UTC)
-                        if job_started >= deadline:
-                            logger.info(
-                                "Job start time beyond deadline | job_id=%s job_start=%s deadline=%s",
-                                job_id,
-                                job_started,
-                                deadline,
-                            )
-                            return None
-                except Exception as e:
-                    logger.debug(
-                        "Failed to compare job_start_time with deadline | err=%s",
-                        e,
-                    )
-                if result:
-                    if isinstance(result, str):
-                        return result
-                    if isinstance(result, dict):
-                        # Prefer nested {data} for presentation
-                        data_hex = result.get("data") or result.get("hex")
-                        if isinstance(data_hex, str):
-                            return data_hex
-                        logger.debug(
-                            "Unsupported result format from miner | result=%s",
-                            result,
-                        )
-                        return None
-            except Exception as e:
-                logger.debug(
-                    "Single job fetch failed | job_id=%s err=%s", job_id, e
-                )
-            return None
+            # Check job status and get proof
+            return await self._check_job_status(job_id, coupon, miner_node)
+            
         except MinerJobFailed:
             # propagate to caller for marking coupon invalid
             raise
