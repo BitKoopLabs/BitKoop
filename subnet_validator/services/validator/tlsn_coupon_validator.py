@@ -172,14 +172,14 @@ class TlsnCouponValidator(BaseCouponValidator):
                             result,
                         )
                         return None
-            except MinerJobFailed:
-                # propagate to caller for marking coupon invalid
-                raise
             except Exception as e:
                 logger.debug(
                     "Single job fetch failed | job_id=%s err=%s", job_id, e
                 )
             return None
+        except MinerJobFailed:
+            # propagate to caller for marking coupon invalid
+            raise
         except Exception as e:
             logger.exception(
                 "Failed to request proof from miner | code=%s err=%s",
