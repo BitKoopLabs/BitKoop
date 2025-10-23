@@ -40,11 +40,13 @@ async def _validate_coupons_by_status(
     logger.info(
         f"Starting validation for coupons with status={status} and last_checked_to={last_checked_to}"
     )
+    # Use the existing method with site_status filter to only get coupons from active sites
     coupons = coupon_service.get_coupons(
         status=status,
         last_checked_to=last_checked_to,
+        site_status=SiteStatus.ACTIVE,
     )
-    logger.info(f"Fetched {len(coupons)} coupons for validation.")
+    logger.info(f"Fetched {len(coupons)} coupons for validation from active sites only.")
     coupons_by_site = defaultdict(list)
     for coupon in coupons:
         coupons_by_site[coupon.site_id].append(coupon)
@@ -54,14 +56,10 @@ async def _validate_coupons_by_status(
     ) in coupons_by_site.items():
         logger.info(f"Processing {len(coupons)} coupons for site_id={site_id}")
         site = coupon_service.db.query(Site).filter(Site.id == site_id).first()
-        if not site or site.status != SiteStatus.ACTIVE:
+        if not site:
             logger.warning(
-                f"Site config not found for site_id={site_id} or site is not active. Setting all coupons to PENDING."
+                f"Site config not found for site_id={site_id}. Skipping validation. Pay attention to this site in the future."
             )
-            for coupon in coupons:
-                if coupon.status == CouponStatus.VALID:
-                    coupon.status = CouponStatus.PENDING
-                    coupon.last_checked_at = datetime.now(UTC)
             continue
         try:
             validator = dependencies.get_coupon_validator(site, settings, coupon_service, coupon_service.metagraph)

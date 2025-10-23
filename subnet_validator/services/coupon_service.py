@@ -241,8 +241,20 @@ class CouponService:
             "created_at", "updated_at", "last_action_date"
         ] = "updated_at",
         bypass_submit_window: bool = False,
+        site_status: Optional[SiteStatus] = None,
     ) -> List[Coupon]:
-        query = self.db.query(Coupon)
+        """
+        Get coupons with optional filtering by site status.
+        
+        Args:
+            site_status: If provided, only return coupons from sites with this status.
+                        If None, return coupons from all sites regardless of status.
+        """
+        if site_status is not None:
+            query = self.db.query(Coupon).join(Site).filter(Site.status == site_status)
+        else:
+            query = self.db.query(Coupon)
+            
         if not bypass_submit_window:
             query = query.filter(
                 Coupon.last_action_date
@@ -276,6 +288,7 @@ class CouponService:
             .all()
         )
         return coupons
+
 
     def delete_coupon(
         self,
