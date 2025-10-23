@@ -357,6 +357,7 @@ class TlsnCouponValidator(BaseCouponValidator):
                         if datetime.now(UTC) > deadline:
                             # Mark as deleted and clear ownership
                             coupon.status = CouponStatus.DELETED
+                            coupon.deleted_at = datetime.now(UTC)
                             try:
                                 self.coupon_service._clear_coupon_ownership(
                                     site_id=coupon.site_id, code=coupon.code
